@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛒 Grocery Price Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f1117; }
+  input, select { outline: none !important; }
+  input:focus, select:focus { border-color: #2563eb !important; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0f1117; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+function deriveRow(row) {
+  const tp = parseFloat(row.totalPrice), u = parseInt(row.units);
+  const w = parseFloat(row.weight), rp = parseFloat(row.regPrice);
+  let pricePerUnit=null, pricePerKg=null, pricePer100g=null, saving=null;
+  if (!isNaN(tp)) {
+    if (!isNaN(u) && u > 0) pricePerUnit = +(tp/u).toFixed(3);
+    if (!isNaN(w) && w > 0 && row.unit) {
+      const ul = (row.unit||"").toLowerCase();
+      const g = ul==="g"||ul==="ml"?w : ul==="kg"||ul==="l"?w*1000 : ul==="oz"?w*28.3495 : ul==="lb"?w*453.592 : null;
+      if (g) { pricePerKg=+(tp/g*1000).toFixed(3); pricePer100g=+(tp/g*100).toFixed(3); }
+    }
+    if (!isNaN(rp) && rp > 0) saving = +(rp-tp).toFixed(2);
+  }
+  return { ...row, pricePerUnit, pricePerKg, pricePer100g, saving };
+}
+
+const fmt$ = v => v!=null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : "—";
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
+const TODAY = () => new Date().toISOString().slice(0,10);
+const EMPTY = { product:"",category:"",store:"",onSale:"",units:"",weight:"",unit:"",totalPrice:"",regPrice:"",notes:"" };
+
+const S = {
+  app:    { fontFamily:"'DM Sans','Segoe UI',sans-serif", background:"#0f1117", minHeight:"100vh", color:"#e8eaf0" },
+  header: { background:"linear-gradient(135deg,#1a2744,#0f1117)", borderBottom:"1px solid #2a3a5c", padding:"18px 24px 0", display:"flex", flexDirection:"column", gap:6 },
+  logo:   { fontSize:22, fontWeight:800, letterSpacing:-0.5, color:"#7eb8f7" },
+  sub:    { fontSize:12, color:"#6b7ba4", marginBottom:10 },
+  body:   { padding:20, maxWidth:1200, margin:"0 auto" },
+  card:   { background:"#1a2035", border:"1px solid #2a3a5c", borderRadius:12, padding:20, marginBottom:16 },
+  lbl:    { fontSize:11, fontWeight:700, color:"#6b7ba4", textTransform:"uppercase", letterSpacing:0.8, marginBottom:4, display:"block" },
+  inp:    { width:"100%", background:"#0f1520", border:"1px solid #2a3a5c", borderRadius:8, padding:"8px 12px", color:"#e8eaf0", fontSize:13 },
+  th:     { padding:"8px 10px", textAlign:"left", borderBottom:"1px solid #2a3a5c", color:"#6b7ba4", fontWeight:700, fontSize:11, textTransform:"uppercase", letterSpacing:0.5, whiteSpace:"nowrap" },
+  td:     { padding:"8px 10px", borderBottom:"1px solid #161c2d", color:"#ccd4e8", fontSize:12, whiteSpace:"nowrap" },
+};
+
+const tabStyle = active => ({
+  padding:"8px 18px", border:"none", borderRadius:"8px 8px 0 0", cursor:"pointer",
+  fontSize:13, fontWeight:600, background:active?"#1e2d50":"transparent",
+  color:active?"#7eb8f7":"#6b7ba4", borderBottom:active?"2px solid #7eb8f7":"2px solid transparent"
+});
+
+const btnStyle = (v="primary") => ({
+  padding:"9px 20px", borderRadius:8, border:"none", cursor:"pointer", fontWeight:700, fontSize:13,
+  background: v==="primary"?"#2563eb":v==="danger"?"#7f1d1d":v==="success"?"#166534":"#1e2d50",
+  color:       v==="primary"?"#fff"   :v==="danger"?"#fca5a5":v==="success"?"#86efac":"#7eb8f7",
+});
+
+function App() {
+  const [entries, setEntries] = useState(() => { try { return JSON.parse(localStorage.getItem("gt")||"[]"); } catch { return []; } });
+  const [activeTab, setActiveTab] = useState("db");
+  const [form, setForm] = useState({ ...EMPTY, date:TODAY() });
+  const [editId, setEditId] = useState(null);
+  const [filter, setFilter] = useState({ product:"", store:"", category:"" });
+  const [sortBy, setSortBy] = useState("date");
+
+  useEffect(() => { try { localStorage.setItem("gt", JSON.stringify(entries)); } catch {} }, [entries]);
+
+  const allProducts = [...new Set(entries.map(e=>e.product).filter(Boolean))].sort();
+  const allStores   = [...new Set(entries.map(e=>e.store).filter(Boolean))].sort();
+  const allCats     = [...new Set(entries.map(e=>e.category).filter(Boolean))].sort();
+
+  const setField = k => e => setForm(f => ({...f, [k]: e.target.value}));
+
+  const save = () => {
+    if (!form.product.trim()) return;
+    const row = deriveRow({ ...form, id: editId||uid() });
+    setEntries(prev => editId ? prev.map(e=>e.id===editId?row:e) : [...prev, row]);
+    setForm({ ...EMPTY, date:TODAY() });
+    setEditId(null);
+    setActiveTab("db");
+  };
+
+  const startEdit = e => { setForm({...e}); setEditId(e.id); setActiveTab("add"); };
+  const cancel    = () => { setForm({...EMPTY, date:TODAY()}); setEditId(null); setActiveTab("db"); };
+  const del       = id => { if (window.confirm("Delete this entry?")) setEntries(p=>p.filter(e=>e.id!==id)); };
+
+  const switchTab = id => {
+    if (id !== "add") { setEditId(null); setForm({...EMPTY, date:TODAY()}); }
+    setActiveTab(id);
+  };
+
+  const filtered = entries
+    .filter(e =>
+      (!filter.product  || e.product?.toLowerCase().includes(filter.product.toLowerCase())) &&
+      (!filter.store    || e.store?.toLowerCase().includes(filter.store.toLowerCase())) &&
+      (!filter.category || e.category?.toLowerCase().includes(filter.category.toLowerCase()))
+    )
+    .sort((a,b) => {
+      if (sortBy==="date")    return (b.date||"").localeCompare(a.date||"");
+      if (sortBy==="product") return (a.product||"").localeCompare(b.product||"");
+      if (sortBy==="store")   return (a.store||"").localeCompare(b.store||"");
+      if (sortBy==="price")   return parseFloat(a.totalPrice)-parseFloat(b.totalPrice);
+      return 0;
+    });
+
+  // Analytics helpers
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+
+  const productAnalytics = allProducts.map(p => {
+    const rows   = entries.filter(e=>e.product===p);
+    const prices = rows.map(r=>parseFloat(r.totalPrice)).filter(x=>!isNaN(x));
+    const ppkg   = rows.map(r=>r.pricePerKg).filter(x=>x!=null);
+    const byStore = {};
+    rows.forEach(r => {
+      if (r.store && !isNaN(parseFloat(r.totalPrice))) {
+        byStore[r.store] = byStore[r.store]||[];
+        byStore[r.store].push(parseFloat(r.totalPrice));
+      }
+    });
+    const storeAvgs = Object.entries(byStore).map(([s,ps])=>({store:s,avg:avg(ps)})).sort((a,b)=>a.avg-b.avg);
+    return {
+      product: p, count: rows.length,
+      avgPrice: avg(prices),
+      minPrice: prices.length ? Math.min(...prices) : null,
+      maxPrice: prices.length ? Math.max(...prices) : null,
+      avgPpkg: avg(ppkg), storeAvgs,
+      bestStore: storeAvgs[0]?.store,
+      worstStore: storeAvgs.at(-1)?.store,
+    };
+  });
+
+  const preview = deriveRow(form);
+
+  return (
+    <div style={S.app}>
+      {/* ── Header ── */}
+      <div style={S.header}>
+        <div style={S.logo}>🛒 Grocery Price Tracker</div>
+        <div style={S.sub}>{entries.length} entries · {allProducts.length} products · {allStores.length} stores</div>
+        <div style={{display:"flex",gap:2}}>
+          {[["db","📋 Database"],["add","➕ Add Entry"],["analytics","📊 Analytics"]].map(([id,label])=>(
+            <button key={id} style={tabStyle(activeTab===id)} onClick={()=>switchTab(id)}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={S.body}>
+
+        {/* ── DATABASE TAB ── */}
+        {activeTab==="db" && <>
+          <div style={{...S.card, padding:"14px 16px"}}>
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:10, alignItems:"end"}}>
+              {[["product","Filter product"],["store","Filter store"],["category","Filter category"]].map(([k,ph])=>(
+                <div key={k}>
+                  <label style={S.lbl}>{ph}</label>
+                  <input style={S.inp} placeholder={ph+"…"} value={filter[k]} onChange={e=>setFilter(f=>({...f,[k]:e.target.value}))} />
+                </div>
+              ))}
+              <div>
+                <label style={S.lbl}>Sort by</label>
+                <select style={S.inp} value={sortBy} onChange={e=>setSortBy(e.target.value)}>
+                  {["date","product","store","price"].map(o=><option key={o} value={o}>{o[0].toUpperCase()+o.slice(1)}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {filtered.length===0
+            ? <div style={{...S.card,textAlign:"center",color:"#6b7ba4",padding:60}}>
+                No entries yet — click <strong style={{color:"#7eb8f7"}}>Add Entry</strong> to get started.
+              </div>
+            : <div style={{...S.card,padding:0,overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead>
+                    <tr style={{background:"#141c2e"}}>
+                      {["Date","Product","Category","Store","Sale","Units","Weight","Total","$/Unit","$/100g","$/kg","Reg.","Saving","Notes",""].map(h=>(
+                        <th key={h} style={S.th}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(e=>(
+                      <tr key={e.id}
+                        onMouseEnter={ev=>ev.currentTarget.style.background="#1e2d50"}
+                        onMouseLeave={ev=>ev.currentTarget.style.background="transparent"}>
+                        <td style={S.td}>{e.date||"—"}</td>
+                        <td style={{...S.td,fontWeight:700,color:"#a8c8f8"}}>{e.product||"—"}</td>
+                        <td style={S.td}>{e.category||"—"}</td>
+                        <td style={S.td}>{e.store||"—"}</td>
+                        <td style={S.td}>
+                          {e.onSale==="Y"
+                            ? <span style={{background:"#86efac22",color:"#86efac",padding:"2px 8px",borderRadius:999,fontWeight:700,fontSize:11}}>SALE</span>
+                            : e.onSale==="N"?"—":"?"}
+                        </td>
+                        <td style={S.td}>{e.units||"—"}</td>
+                        <td style={S.td}>{e.weight&&e.unit?`${e.weight}${e.unit}`:"—"}</td>
+                        <td style={{...S.td,fontWeight:700,color:"#7eb8f7"}}>{fmt$(e.totalPrice)}</td>
+                        <td style={S.td}>{fmt$(e.pricePerUnit)}</td>
+                        <td style={S.td}>{fmt$(e.pricePer100g)}</td>
+                        <td style={S.td}>{fmt$(e.pricePerKg)}</td>
+                        <td style={S.td}>{fmt$(e.regPrice)}</td>
+                        <td style={{...S.td,color:e.saving>0?"#86efac":"#6b7ba4"}}>{e.saving>0?fmt$(e.saving):"—"}</td>
+                        <td style={{...S.td,maxWidth:110,overflow:"hidden",textOverflow:"ellipsis",color:"#6b7ba4"}}>{e.notes||"—"}</td>
+                        <td style={S.td}>
+                          <div style={{display:"flex",gap:4}}>
+                            <button style={{...btnStyle("secondary"),padding:"3px 9px",fontSize:11}} onClick={()=>startEdit(e)}>✏️</button>
+                            <button style={{...btnStyle("danger"),padding:"3px 9px",fontSize:11}} onClick={()=>del(e.id)}>🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+          }
+        </>}
+
+        {/* ── ADD / EDIT TAB ── */}
+        {activeTab==="add" && (
+          <div style={S.card}>
+            <h3 style={{margin:"0 0 20px",color:"#7eb8f7",fontSize:16}}>{editId?"✏️ Edit Entry":"➕ New Entry"}</h3>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+              <div>
+                <label style={S.lbl}>Date</label>
+                <input type="date" style={S.inp} value={form.date||""} onChange={setField("date")} />
+              </div>
+              <div>
+                <label style={S.lbl}>Product Name</label>
+                <input style={S.inp} value={form.product||""} onChange={setField("product")} list="prod-list" />
+                <datalist id="prod-list">{allProducts.map(p=><option key={p} value={p}/>)}</datalist>
+              </div>
+              <div>
+                <label style={S.lbl}>Category</label>
+                <input style={S.inp} value={form.category||""} onChange={setField("category")} list="cat-list" />
+                <datalist id="cat-list">{allCats.map(c=><option key={c} value={c}/>)}</datalist>
+              </div>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:12,marginBottom:12}}>
+              <div>
+                <label style={S.lbl}>Store</label>
+                <input style={S.inp} value={form.store||""} onChange={setField("store")} list="store-list" />
+                <datalist id="store-list">{allStores.map(s=><option key={s} value={s}/>)}</datalist>
+              </div>
+              <div>
+                <label style={S.lbl}>On Sale?</label>
+                <select style={S.inp} value={form.onSale||""} onChange={setField("onSale")}>
+                  <option value="">—</option>
+                  <option value="Y">Yes</option>
+                  <option value="N">No</option>
+                </select>
+              </div>
+              <div>
+                <label style={S.lbl}># Units</label>
+                <input type="number" min="1" style={S.inp} value={form.units||""} onChange={setField("units")} />
+              </div>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:12,marginBottom:12}}>
+              <div>
+                <label style={S.lbl}>Weight / Volume</label>
+                <input type="number" style={S.inp} value={form.weight||""} onChange={setField("weight")} />
+              </div>
+              <div>
+                <label style={S.lbl}>Unit</label>
+                <select style={S.inp} value={form.unit||""} onChange={setField("unit")}>
+                  {["","g","kg","mL","L","oz","lb"].map(u=><option key={u} value={u}>{u||"—"}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={S.lbl}>Total Price ($)</label>
+                <input type="number" step="0.01" style={S.inp} value={form.totalPrice||""} onChange={setField("totalPrice")} />
+              </div>
+              <div>
+                <label style={S.lbl}>Regular Price ($)</label>
+                <input type="number" step="0.01" style={S.inp} value={form.regPrice||""} onChange={setField("regPrice")} />
+              </div>
+            </div>
+
+            <div style={{marginBottom:14}}>
+              <label style={S.lbl}>Notes</label>
+              <input style={S.inp} value={form.notes||""} onChange={setField("notes")} />
+            </div>
+
+            {/* Live calculated preview */}
+            {form.totalPrice && (
+              <div style={{background:"#0f1520",border:"1px solid #2a3a5c",borderRadius:8,padding:"10px 16px",marginBottom:16,display:"flex",gap:24,flexWrap:"wrap",alignItems:"center"}}>
+                <span style={{fontSize:11,color:"#6b7ba4",fontWeight:700}}>CALCULATED:</span>
+                {[["$/unit",preview.pricePerUnit],["$/100g",preview.pricePer100g],["$/kg",preview.pricePerKg],["Saving",preview.saving]].map(([l,v])=>v!=null?(
+                  <span key={l} style={{fontSize:13}}>
+                    <span style={{color:"#6b7ba4",fontSize:11}}>{l} </span>
+                    <strong style={{color:"#86efac"}}>{fmt$(v)}</strong>
+                  </span>
+                ):null)}
+              </div>
+            )}
+
+            <div style={{display:"flex",gap:10}}>
+              <button style={btnStyle("primary")} onClick={save}>{editId?"Save Changes":"Add Entry"}</button>
+              <button style={btnStyle()} onClick={cancel}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── ANALYTICS TAB ── */}
+        {activeTab==="analytics" && (
+          entries.length===0
+            ? <div style={{...S.card,textAlign:"center",color:"#6b7ba4",padding:60}}>No data yet — add some entries first.</div>
+            : <>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+                  {[
+                    ["Total Entries",  entries.length,                           "#7eb8f7"],
+                    ["Products",       allProducts.length,                       "#86efac"],
+                    ["Stores",         allStores.length,                         "#fbbf24"],
+                    ["Sale Purchases", entries.filter(e=>e.onSale==="Y").length, "#f472b6"],
+                  ].map(([label,val,color])=>(
+                    <div key={label} style={{...S.card,margin:0,textAlign:"center",borderTop:`3px solid ${color}`}}>
+                      <div style={{fontSize:30,fontWeight:800,color,lineHeight:1.2}}>{val}</div>
+                      <div style={{fontSize:11,color:"#6b7ba4",marginTop:4}}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={S.card}>
+                  <h3 style={{margin:"0 0 14px",color:"#7eb8f7",fontSize:15}}>Price Analysis by Product</h3>
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse"}}>
+                      <thead>
+                        <tr style={{background:"#141c2e"}}>
+                          {["Product","Records","Avg Price","Min","Max","Avg $/kg","Best Store","Worst Store"].map(h=>(
+                            <th key={h} style={S.th}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {productAnalytics.sort((a,b)=>a.product.localeCompare(b.product)).map(p=>(
+                          <tr key={p.product}
+                            onMouseEnter={ev=>ev.currentTarget.style.background="#1e2d50"}
+                            onMouseLeave={ev=>ev.currentTarget.style.background="transparent"}>
+                            <td style={{...S.td,fontWeight:700,color:"#a8c8f8"}}>{p.product}</td>
+                            <td style={S.td}>{p.count}</td>
+                            <td style={{...S.td,fontWeight:700,color:"#7eb8f7"}}>{fmt$(p.avgPrice)}</td>
+                            <td style={{...S.td,color:"#86efac"}}>{fmt$(p.minPrice)}</td>
+                            <td style={{...S.td,color:"#fca5a5"}}>{fmt$(p.maxPrice)}</td>
+                            <td style={S.td}>{fmt$(p.avgPpkg)}</td>
+                            <td style={{...S.td,color:"#86efac"}}>{p.bestStore||"—"}</td>
+                            <td style={{...S.td,color:p.storeAvgs.length>1?"#fca5a5":"#6b7ba4"}}>{p.storeAvgs.length>1?p.worstStore:"—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div style={S.card}>
+                  <h3 style={{margin:"0 0 14px",color:"#7eb8f7",fontSize:15}}>Store Comparison</h3>
+                  {productAnalytics.filter(p=>p.storeAvgs.length>1).length===0
+                    ? <p style={{color:"#6b7ba4",fontSize:13}}>Track the same product at 2+ stores to see comparisons here.</p>
+                    : productAnalytics.filter(p=>p.storeAvgs.length>1).sort((a,b)=>a.product.localeCompare(b.product)).map(p=>(
+                        <div key={p.product} style={{marginBottom:20}}>
+                          <div style={{fontWeight:700,color:"#a8c8f8",marginBottom:8,fontSize:14}}>{p.product}</div>
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                            {p.storeAvgs.map((sv,i)=>(
+                              <div key={sv.store} style={{
+                                background: i===0?"#166534":"#1a2035",
+                                border: `1px solid ${i===0?"#22c55e":"#2a3a5c"}`,
+                                borderRadius:10, padding:"10px 16px", minWidth:130
+                              }}>
+                                <div style={{fontSize:11,color:"#6b7ba4",marginBottom:2}}>{sv.store}</div>
+                                <div style={{fontSize:20,fontWeight:800,color:i===0?"#86efac":"#e8eaf0"}}>{fmt$(sv.avg)}</div>
+                                {i===0 && <div style={{fontSize:10,color:"#86efac",marginTop:2}}>✓ cheapest avg</div>}
+                                {i===p.storeAvgs.length-1 && i>0 && <div style={{fontSize:10,color:"#fca5a5",marginTop:2}}>↑ most expensive</div>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
+              </>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
