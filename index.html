@@ -171,7 +171,16 @@ const EMPTY  = { product:"",brand:"",category:"",store:"",onSale:"",units:"",wei
 /* ── App ── */
 function App() {
   const [entries, setEntries] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("gt_v3")||"[]"); } catch { return []; }
+    try {
+      // Migrate data from old key (gt_v2) if present
+      const old = localStorage.getItem("gt_v2");
+      if (old) {
+        const parsed = JSON.parse(old);
+        if (Array.isArray(parsed) && parsed.length) localStorage.setItem("gt_v3", old);
+        localStorage.removeItem("gt_v2");
+      }
+      return JSON.parse(localStorage.getItem("gt_v3")||"[]");
+    } catch { return []; }
   });
   const [tab,        setTab]        = useState("db");
   const [form,       setForm]       = useState({ ...EMPTY, date:TODAY() });
