@@ -341,9 +341,11 @@ function App() {
   const [syncStatus,  setSyncStatus]  = useState("idle");
   const [lastSynced,  setLastSynced]  = useState(null);
   const [toast,      setToast]      = useState(null);
+  const [scanning,   setScanning]   = useState(false);
   const importRef = useRef();
   const searchRef = useRef();
   const analyticsSearchRef = useRef();
+  const cameraRef = useRef();
   const pushTimer = useRef(null);
   const isFirstRender = useRef(true);
 
@@ -465,6 +467,127 @@ function App() {
     };
     reader.readAsText(file);
     e.target.value = ""; // reset so same file can be re-imported
+  };
+
+  /* ── Camera Scan Feature ── */
+  const handleImageCapture = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setScanning(true);
+    showToast("📸 Processing image...");
+    
+    try {
+      // Convert image to base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      // Get file type
+      const mediaType = file.type;
+      
+      // Call Claude API via backend proxy
+      const extracted = await scanProductImage(base64, mediaType);
+      
+      if (extracted) {
+        // Auto-fill form with extracted data
+        setForm(f => ({
+          ...f,
+          product: extracted.product || f.product,
+          brand: extracted.brand || f.brand,
+          totalPrice: extracted.price != null ? extracted.price.toString() : f.totalPrice,
+          weight: extracted.size != null ? extracted.size.toString() : f.weight,
+          unit: extracted.unit || f.unit,
+          onSale: extracted.sale ? "Y" : f.onSale,
+          notes: extracted.notes || f.notes,
+          date: f.date || TODAY()
+        }));
+        showToast("✅ Product scanned!");
+      } else {
+        showToast("⚠️ Could not extract product info");
+      }
+    } catch (err) {
+      console.error("Scan error:", err);
+      showToast("❌ Scan failed - " + (err.message || "try again"));
+    } finally {
+      setScanning(false);
+      e.target.value = ""; // reset input
+    }
+  };
+
+  const scanProductImage = async (base64Image, mediaType) => {
+    // ⚠️ IMPORTANT: This calls Claude API directly from the browser
+    // For production, you MUST use a backend proxy to keep your API key secret!
+    // Replace this URL with your own serverless function endpoint
+    
+    const API_ENDPOINT = "YOUR_BACKEND_PROXY_URL_HERE"; // e.g., Vercel/Cloudflare/AWS Lambda
+    
+    // Example: If you had a backend proxy, it would look like this:
+    // const response = await fetch(API_ENDPOINT, {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify({ image: base64Image, mediaType })
+    // });
+    
+    // For demo purposes, here's what the backend would do:
+    // It would call: https://api.anthropic.com/v1/messages with:
+    const apiRequestBody = {
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mediaType,
+              data: base64Image
+            }
+          },
+          {
+            type: "text",
+            text: `Extract product information from this grocery store image. Look for:
+- Product name (generic, e.g., "Grape Jelly" not brand)
+- Brand name
+- Price (number only)
+- Size/weight (number only)
+- Unit (g, kg, mL, L, oz, lb)
+- Whether it's on sale
+
+Return ONLY a JSON object, no other text:
+{
+  "product": "product name",
+  "brand": "brand name", 
+  "price": 6.47,
+  "size": 500,
+  "unit": "mL",
+  "sale": false,
+  "notes": "any relevant details"
+}`
+          }
+        ]
+      }]
+    };
+
+    // ⚠️ DEMO ONLY - This will fail without a backend proxy!
+    // Uncomment and configure your backend endpoint above
+    throw new Error("Backend proxy not configured. See scanProductImage() function for setup instructions.");
+    
+    // When you have a backend proxy set up, it should:
+    // 1. Receive the image data
+    // 2. Call Claude API with your API key (server-side only!)
+    // 3. Parse the JSON response
+    // 4. Return the extracted data
+    
+    // Example response handling:
+    // const data = await response.json();
+    // const textContent = data.content.find(c => c.type === "text")?.text;
+    // const parsed = JSON.parse(textContent.replace(/```json\n?|```/g, ""));
+    // return parsed;
   };
 
   const filtered = useMemo(() => {
@@ -673,6 +796,28 @@ function App() {
         <div className="page">
           <div className="card">
             <h2 style={{fontSize:18,fontWeight:800,color:"#60a5fa",marginBottom:20}}>{editId?"✏️ Edit Entry":"➕ New Entry"}</h2>
+
+            {/* Camera scan feature (only show when adding new entry, not editing) */}
+            {!editId && (
+              <>
+                <input 
+                  ref={cameraRef}
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment"
+                  style={{display:"none"}}
+                  onChange={handleImageCapture}
+                />
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={()=>cameraRef.current?.click()}
+                  disabled={scanning}
+                  style={{marginBottom:16}}
+                >
+                  {scanning ? "🔄 Scanning..." : "📸 Scan Product"}
+                </button>
+              </>
+            )}
 
             <div className="field-row cols-2">
               <div>
