@@ -22,8 +22,26 @@
     padding: 16px 16px 0;
     position: sticky; top: 0; z-index: 100;
   }
-  .logo  { font-size: 20px; font-weight: 800; color: #60a5fa; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+  .logo  { font-size: 20px; font-weight: 800; color: #60a5fa; letter-spacing: -0.5px; }
   .stats { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+
+  /* Sync status pill */
+  .sync-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; cursor: default; }
+  .sync-pill.synced  { background: #14532d33; color: #4ade80; }
+  .sync-pill.syncing { background: #1e3a5f;   color: #93c5fd; }
+  .sync-pill.error   { background: #450a0a33; color: #fca5a5; }
+  .sync-pill.idle    { background: #1e2d5033; color: #64748b; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+
+  /* Setup screen */
+  .setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 32px 24px; text-align: center; }
+  .setup-icon  { font-size: 56px; margin-bottom: 20px; }
+  .setup-title { font-size: 22px; font-weight: 800; color: #60a5fa; margin-bottom: 8px; }
+  .setup-desc  { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 28px; max-width: 320px; }
+  .setup-input { width: 100%; max-width: 320px; background: #0d1117; border: 1.5px solid #1e3a5f; border-radius: 12px; padding: 14px 16px; color: #e2e8f0; font-size: 16px; font-family: inherit; margin-bottom: 12px; outline: none; }
+  .setup-input:focus { border-color: #3b82f6; }
 
   .nav { display: flex; border-top: 1px solid #1e3a5f; }
   .nav-btn {
@@ -199,6 +217,21 @@ const TODAY  = () => new Date().toISOString().slice(0,10);
 const avg    = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
 const EMPTY  = { product:"",brand:"",category:"",store:"",onSale:"",units:"",weight:"",unit:"",totalPrice:"",regPrice:"",notes:"",tags:[] };
 
+const LAMBDA_URL = "https://3jdo4h6d3mmemlnpte734n3wny0shxzn.lambda-url.ca-central-1.on.aws/";
+
+function mergeEntries(local, incoming) {
+  const map = new Map(local.map(e => [e.id, e]));
+  incoming.forEach(row => {
+    const incomingTs = row.updatedAt || "0";
+    const existing   = map.get(row.id);
+    const existingTs = existing?.updatedAt || "0";
+    if (!existing || incomingTs > existingTs) {
+      map.set(row.id, deriveRow({ ...row, tags: row.tags||[], updatedAt: row.updatedAt || new Date().toISOString() }));
+    }
+  });
+  return [...map.values()];
+}
+
 /* ── Tag Input ── */
 function TagInput({ tags, onChange, allTags }) {
   const [input,    setInput]    = useState("");
@@ -261,9 +294,10 @@ function TagInput({ tags, onChange, allTags }) {
 
 /* ── App ── */
 function App() {
+  const [secret,      setSecret]      = useState(()=>localStorage.getItem("gt_secret")||"");
+  const [secretInput, setSecretInput] = useState("");
   const [entries, setEntries] = useState(() => {
     try {
-      // Migrate data from old key (gt_v2) if present
       const old = localStorage.getItem("gt_v2");
       if (old) {
         const parsed = JSON.parse(old);
@@ -281,9 +315,13 @@ function App() {
   const [searchQ,    setSearchQ]    = useState("");
   const [tagFilter,  setTagFilter]  = useState(null);
   const [analyticsTag,setAnalyticsTag]= useState(null);
+  const [syncStatus,  setSyncStatus]  = useState("idle");
+  const [lastSynced,  setLastSynced]  = useState(null);
   const [toast,      setToast]      = useState(null);
   const importRef = useRef();
   const searchRef = useRef();
+  const pushTimer = useRef(null);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     try { localStorage.setItem("gt_v3", JSON.stringify(entries)); } catch {}
@@ -292,6 +330,59 @@ function App() {
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 2600);
+  };
+
+  /* ── Cloud pull ── */
+  const pullCloud = useCallback(async (sk) => {
+    const key = sk||secret; if (!key) return;
+    setSyncStatus("syncing");
+    try {
+      const res = await fetch(LAMBDA_URL, { headers:{"x-secret":key} });
+      if (res.status===403) { setSyncStatus("error"); showToast("❌ Wrong secret key"); return; }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const remote = data.entries||[];
+      setEntries(prev => {
+        const merged = mergeEntries(prev, remote);
+        pushCloud(merged, key);
+        return merged;
+      });
+      setLastSynced(new Date()); setSyncStatus("synced");
+    } catch { setSyncStatus("error"); showToast("⚠️ Sync failed — working offline"); }
+  }, [secret]);
+
+  /* ── Cloud push ── */
+  const pushCloud = useCallback(async (entriesToPush, sk) => {
+    const key = sk||secret; if (!key) return;
+    setSyncStatus("syncing");
+    try {
+      const res = await fetch(LAMBDA_URL, {
+        method:"PUT",
+        headers:{"Content-Type":"application/json","x-secret":key},
+        body: JSON.stringify({entries: entriesToPush})
+      });
+      if (!res.ok) throw new Error();
+      setLastSynced(new Date()); setSyncStatus("synced");
+    } catch { setSyncStatus("error"); }
+  }, [secret]);
+
+  // Pull on mount (once secret is set)
+  useEffect(()=>{ if (secret) pullCloud(secret); },[]);
+
+  // Debounced push whenever entries change (skip initial mount)
+  useEffect(()=>{
+    if (isFirstRender.current) { isFirstRender.current=false; return; }
+    if (!secret) return;
+    clearTimeout(pushTimer.current);
+    pushTimer.current = setTimeout(()=>pushCloud(entries), 1500);
+    return ()=>clearTimeout(pushTimer.current);
+  }, [entries]);
+
+  const saveSecret = () => {
+    const s = secretInput.trim(); if (!s) return;
+    localStorage.setItem("gt_secret",s);
+    setSecret(s);
+    pullCloud(s);
   };
 
   const allProducts = useMemo(() => [...new Set(entries.map(e=>e.product).filter(Boolean))].sort(), [entries]);
@@ -308,7 +399,7 @@ function App() {
 
   const save = () => {
     if (!form.product.trim()) return;
-    const row = deriveRow({ ...form, id: editId||uid(), tags: form.tags||[] });
+    const row = deriveRow({ ...form, id: editId||uid(), tags: form.tags||[], updatedAt: new Date().toISOString() });
     setEntries(prev => editId ? prev.map(e=>e.id===editId?row:e) : [...prev, row]);
     setForm({ ...EMPTY, date:TODAY() }); setEditId(null); setTab("db");
   };
@@ -342,14 +433,7 @@ function App() {
         const parsed = JSON.parse(ev.target.result);
         const incoming = parsed.entries || parsed; // support bare array too
         if (!Array.isArray(incoming)) throw new Error("Invalid format");
-        setEntries(prev => {
-          const map = new Map(prev.map(e=>[e.id, e]));
-          incoming.forEach(row => {
-            if (!map.has(row.id)) map.set(row.id, deriveRow(row));
-            // if duplicate id, keep existing (or swap logic if you prefer newer)
-          });
-          return [...map.values()];
-        });
+        setEntries(prev => mergeEntries(prev, incoming));
         showToast(`✅ Imported ${incoming.length} entries (merged)`);
       } catch {
         showToast("❌ Import failed — invalid file");
@@ -414,15 +498,36 @@ function App() {
 
   const preview = deriveRow(form);
 
+  const syncLabel = syncStatus==="syncing" ? <><span className="spin">⚙️</span> Syncing…</>
+                  : syncStatus==="synced"  ? `✓ ${lastSynced?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`
+                  : syncStatus==="error"   ? "⚠️ Sync error"
+                  : "○ Not synced";
+
+  /* ── First launch: no secret ── */
+  if (!secret) return (
+    <div className="setup-screen">
+      <div className="setup-icon">🔑</div>
+      <div className="setup-title">Enter your sync key</div>
+      <div className="setup-desc">This is the secret you set in the Lambda function. It stays on your device only — it's never stored anywhere except your browser.</div>
+      <input className="setup-input" type="password" placeholder="Your secret key…"
+        value={secretInput} onChange={e=>setSecretInput(e.target.value)}
+        onKeyDown={e=>e.key==="Enter"&&saveSecret()} autoFocus />
+      <button className="btn btn-primary" style={{maxWidth:320}} onClick={saveSecret}>Connect →</button>
+    </div>
+  );
+
   return (
     <div style={{display:"flex",flexDirection:"column",minHeight:"100vh"}}>
 
       {/* Header */}
       <div className="header">
-        <div className="logo">🛒 Grocery Tracker</div>
+        <div className="header-top">
+          <div className="logo">🛒 Grocery Tracker</div>
+          <span className={`sync-pill ${syncStatus}`}>{syncLabel}</span>
+        </div>
         <div className="stats">{entries.length} entries · {allProducts.length} products · {allStores.length} stores</div>
         <nav className="nav">
-          {[["db","🗂️","Database"],["add","➕","Add"],["analytics","📊","Analytics"],["sync","☁️","Share"]].map(([id,icon,lbl])=>(
+          {[["db","🗂️","Database"],["add","➕","Add"],["analytics","📊","Analytics"],["sync","☁️","Sync"]].map(([id,icon,lbl])=>(
             <button key={id} className={`nav-btn${tab===id?" active":""}`} onClick={()=>switchTab(id)}>
               <span className="nav-icon">{icon}</span>
               <span className="nav-label">{lbl}</span>
@@ -691,31 +796,33 @@ function App() {
         </div>
       )}
 
-      {/* ── SHARE / SYNC ── */}
+      {/* ── SYNC TAB ── */}
       {tab==="sync" && (
         <div className="page">
           <div className="card">
-            <div className="section-title">Export</div>
+            <div className="section-title">Cloud sync</div>
             <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>
-              Download your database as a <strong style={{color:"#e2e8f0"}}>.json</strong> file. Send it to your mom (AirDrop, iMessage, email) — she can import it on her end to merge your data.
+              Syncs automatically on open and 1.5s after every save. Both you and your mom use the same Lambda URL and secret — last edit always wins.
             </p>
-            <button className="btn btn-success" onClick={exportData}>⬇️ Export my data</button>
+            <div style={{background:"#0d1117",borderRadius:10,padding:"12px 14px",marginBottom:14,fontSize:13,color:"#64748b",lineHeight:1.8}}>
+              <div>Status: <strong style={{color:syncStatus==="synced"?"#4ade80":syncStatus==="error"?"#fca5a5":"#93c5fd"}}>{syncStatus}</strong></div>
+              {lastSynced&&<div>Last synced: <strong style={{color:"#e2e8f0"}}>{lastSynced.toLocaleTimeString()}</strong></div>}
+              <div>Entries in database: <strong style={{color:"#e2e8f0"}}>{entries.length}</strong></div>
+            </div>
+            <button className="btn btn-primary" onClick={()=>pullCloud(secret)}>🔄 Sync now</button>
           </div>
-
           <div className="card">
-            <div className="section-title">Import</div>
-            <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>
-              Import a <strong style={{color:"#e2e8f0"}}>.json</strong> file from someone else. Entries are <strong style={{color:"#e2e8f0"}}>merged</strong> — your existing data is never deleted.
-            </p>
-            <input ref={importRef} type="file" accept=".json,application/json" style={{display:"none"}} onChange={importData} />
-            <button className="btn btn-warning" onClick={()=>importRef.current.click()}>⬆️ Import a file</button>
+            <div className="section-title">Change secret key</div>
+            <p style={{fontSize:14,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>Update the key saved on this device.</p>
+            <input type="password" placeholder="New secret key…" value={secretInput} onChange={e=>setSecretInput(e.target.value)} style={{marginBottom:10}} />
+            <button className="btn btn-warning" onClick={saveSecret}>Update key</button>
           </div>
-
-          <div className="card" style={{borderColor:"#1e3a5f",opacity:0.7}}>
-            <div className="section-title" style={{color:"#475569"}}>☁️ Cloud sync (future)</div>
-            <p style={{fontSize:14,color:"#475569",lineHeight:1.6}}>
-              When you're ready, you can replace the file-based export/import with an AWS S3 bucket. The workflow would be: both of you point to the same S3 JSON file — the app fetches on open and pushes on change. Ask me to build that when you have an S3 bucket set up.
-            </p>
+          <div className="card">
+            <div className="section-title">File backup</div>
+            <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>Download or restore a local backup, independent of cloud sync.</p>
+            <button className="btn btn-success" onClick={exportData}>⬇️ Export backup</button>
+            <input ref={importRef} type="file" accept=".json,application/json" style={{display:"none"}} onChange={importData} />
+            <button className="btn btn-secondary" onClick={()=>importRef.current.click()}>⬆️ Import backup</button>
           </div>
         </div>
       )}
