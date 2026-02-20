@@ -18,29 +18,12 @@
 
   .header {
     background: linear-gradient(160deg, #1a2744 0%, #111827 100%);
-    border-bottom: 1px solid #1e3a5f; padding: 16px 16px 0;
+    border-bottom: 1px solid #1e3a5f;
+    padding: 16px 16px 0;
     position: sticky; top: 0; z-index: 100;
   }
-  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
-  .logo  { font-size: 20px; font-weight: 800; color: #60a5fa; letter-spacing: -0.5px; }
+  .logo  { font-size: 20px; font-weight: 800; color: #60a5fa; letter-spacing: -0.5px; margin-bottom: 4px; }
   .stats { font-size: 12px; color: #64748b; margin-bottom: 12px; }
-
-  /* Sync status pill */
-  .sync-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; cursor: default; }
-  .sync-pill.synced  { background: #14532d33; color: #4ade80; }
-  .sync-pill.syncing { background: #1e3a5f;   color: #93c5fd; }
-  .sync-pill.error   { background: #450a0a33; color: #fca5a5; }
-  .sync-pill.idle    { background: #1e2d5033; color: #64748b; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spin { display: inline-block; animation: spin 1s linear infinite; }
-
-  /* Setup screen */
-  .setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 32px 24px; text-align: center; }
-  .setup-icon  { font-size: 56px; margin-bottom: 20px; }
-  .setup-title { font-size: 22px; font-weight: 800; color: #60a5fa; margin-bottom: 8px; }
-  .setup-desc  { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 28px; max-width: 320px; }
-  .setup-input { width: 100%; max-width: 320px; background: #0d1117; border: 1.5px solid #1e3a5f; border-radius: 12px; padding: 14px 16px; color: #e2e8f0; font-size: 16px; font-family: inherit; margin-bottom: 12px; outline: none; }
-  .setup-input:focus { border-color: #3b82f6; }
 
   .nav { display: flex; border-top: 1px solid #1e3a5f; }
   .nav-btn {
@@ -53,30 +36,27 @@
   .nav-btn .nav-label { font-size: 11px; font-weight: 600; }
 
   .page { flex: 1; padding: 16px; max-width: 680px; margin: 0 auto; width: 100%; }
+
   .card { background: #161d2e; border: 1px solid #1e3a5f; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
 
   .field { margin-bottom: 14px; }
   .field-row { display: grid; gap: 12px; margin-bottom: 14px; }
   .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
   .field-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
   label.lbl { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
 
   input, select {
     width: 100%; background: #0d1117; border: 1.5px solid #1e3a5f; border-radius: 10px;
     padding: 12px 14px; color: #e2e8f0; font-size: 16px;
-    font-family: inherit; appearance: none; -webkit-appearance: none; transition: border-color 0.15s;
+    font-family: inherit; appearance: none; -webkit-appearance: none;
+    transition: border-color 0.15s;
   }
   input:focus, select:focus { outline: none; border-color: #3b82f6; }
   select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
   }
-
-  /* Search bar */
-  .search-wrap { position: relative; margin-bottom: 12px; }
-  .search-wrap input { padding-left: 40px; }
-  .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
-  .search-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 18px; cursor: pointer; padding: 0; line-height: 1; width: auto; margin: 0; }
 
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; border-radius: 12px; padding: 14px 20px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.15s; width: 100%; margin-bottom: 8px; }
   .btn:active { opacity: 0.75; }
@@ -86,23 +66,6 @@
   .btn-success   { background: #14532d; color: #86efac; }
   .btn-warning   { background: #451a03; color: #fcd34d; }
   .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; margin-bottom: 0; border-radius: 8px; }
-
-  /* Tags input */
-  .tag-input-wrap { background: #0d1117; border: 1.5px solid #1e3a5f; border-radius: 10px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 6px; cursor: text; transition: border-color 0.15s; }
-  .tag-input-wrap:focus-within { border-color: #3b82f6; }
-  .tag-chip { display: inline-flex; align-items: center; gap: 4px; background: #1e3a5f; color: #93c5fd; border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 600; }
-  .tag-chip button { background: none; border: none; color: #64748b; cursor: pointer; font-size: 15px; line-height: 1; padding: 0; width: auto; margin: 0; display: flex; align-items: center; }
-  .tag-chip button:hover { color: #fca5a5; }
-  .tag-input { background: none; border: none; outline: none; color: #e2e8f0; font-size: 15px; font-family: inherit; padding: 4px; min-width: 80px; flex: 1; width: auto; }
-  .tag-suggestions { background: #161d2e; border: 1px solid #1e3a5f; border-radius: 10px; margin-top: 4px; overflow: hidden; }
-  .tag-suggestion { padding: 10px 14px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-  .tag-suggestion:hover, .tag-suggestion.focused { background: #1e2d50; }
-  .tag-suggestion-count { font-size: 11px; color: #64748b; margin-left: auto; }
-
-  /* Entry card tags */
-  .entry-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
-  .entry-tag { background: #1e3a5f; color: #7dd3fc; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 600; cursor: pointer; }
-  .entry-tag:hover { background: #1e4d7a; }
 
   .calc-preview { background: #0d1117; border: 1px solid #1e3a5f; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 12px; }
   .calc-lbl { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; }
@@ -114,21 +77,18 @@
   .entry-brand   { font-size: 13px; font-weight: 600; color: #7dd3fc; opacity: 0.8; margin-top: 1px; }
   .entry-meta    { font-size: 12px; color: #64748b; margin-top: 3px; }
   .entry-actions { display: flex; gap: 6px; flex-shrink: 0; margin-left: 8px; }
-  .entry-prices  { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+  .entry-prices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .price-pill { background: #0d1117; border: 1px solid #1e3a5f; border-radius: 8px; padding: 5px 10px; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
   .price-pill .plbl { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; }
   .price-pill .pval { font-weight: 700; color: #e2e8f0; }
   .price-pill.main .pval { color: #60a5fa; font-size: 15px; }
   .sale-badge { display: inline-block; background: #14532d; color: #4ade80; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
 
-  .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; scrollbar-width: none; }
+  .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
   .filter-bar::-webkit-scrollbar { display: none; }
   .filter-chip { flex-shrink: 0; background: #161d2e; border: 1.5px solid #1e3a5f; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; white-space: nowrap; font-family: inherit; }
   .filter-chip.active { border-color: #3b82f6; color: #60a5fa; background: #172554; }
-
-  .tag-filter-banner { background: #0f2744; border: 1px solid #1e4d7a; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
-  .tag-filter-banner span { color: #7dd3fc; }
-  .tag-filter-banner button { background: none; border: none; color: #64748b; font-size: 18px; cursor: pointer; padding: 0; width: auto; margin: 0; line-height: 1; }
 
   .sort-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
   .sort-row label { font-size: 12px; color: #64748b; white-space: nowrap; }
@@ -138,13 +98,17 @@
   .stat-card { background: #161d2e; border: 1px solid #1e3a5f; border-radius: 14px; padding: 16px; text-align: center; }
   .stat-val  { font-size: 32px; font-weight: 800; line-height: 1; }
   .stat-lbl  { font-size: 12px; color: #64748b; margin-top: 4px; }
+
   .section-title { font-size: 14px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
 
   .product-row { border-bottom: 1px solid #1e3a5f; padding: 14px 0; }
   .product-row:last-child { border-bottom: none; }
   .product-name { font-size: 15px; font-weight: 700; color: #93c5fd; margin-bottom: 4px; }
+
+  /* Brand sub-rows within a product */
   .brand-block { margin-top: 10px; padding: 10px; background: #0d1117; border-radius: 10px; border: 1px solid #1e3a5f; }
   .brand-title { font-size: 12px; font-weight: 700; color: #7dd3fc; margin-bottom: 6px; }
+
   .store-bars { display: flex; flex-direction: column; gap: 6px; }
   .store-bar  { display: flex; align-items: center; gap: 10px; }
   .store-name { font-size: 13px; color: #94a3b8; width: 100px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -152,13 +116,15 @@
   .bar-fill   { height: 100%; border-radius: 999px; }
   .store-price { font-size: 13px; font-weight: 700; width: 55px; text-align: right; }
 
-  .analytics-tag-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-  .analytics-tag-chip { background: #161d2e; border: 1.5px solid #1e3a5f; border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; font-family: inherit; }
-  .analytics-tag-chip.active { border-color: #7dd3fc; color: #7dd3fc; background: #0f2744; }
-
   .empty { text-align: center; padding: 48px 16px; color: #475569; }
   .empty-icon { font-size: 48px; margin-bottom: 12px; }
   .empty-text { font-size: 15px; }
+
+  /* Share / sync section */
+  .sync-section { margin-bottom: 12px; }
+  .sync-row { display: flex; gap: 8px; }
+  .sync-row .btn { margin-bottom: 0; }
+  .sync-note { font-size: 12px; color: #64748b; margin-top: 8px; line-height: 1.5; }
 
   .toast {
     position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
@@ -169,15 +135,15 @@
   }
   @keyframes fadeInOut { 0%{opacity:0;transform:translateX(-50%) translateY(10px)} 15%{opacity:1;transform:translateX(-50%) translateY(0)} 75%{opacity:1} 100%{opacity:0} }
 
-  @media (min-width: 480px) { .stat-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (min-width: 480px) {
+    .stat-grid { grid-template-columns: repeat(4, 1fr); }
+  }
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useMemo, useRef, useCallback } = React;
-
-const LAMBDA_URL = "https://3jdo4h6d3mmemlnpte734n3wny0shxzn.lambda-url.ca-central-1.on.aws/";
+const { useState, useEffect, useMemo, useRef } = React;
 
 /* ── Helpers ── */
 function deriveRow(row) {
@@ -196,296 +162,152 @@ function deriveRow(row) {
   return { ...row, pricePerUnit, pricePerKg, pricePer100g, saving };
 }
 
-function mergeEntries(local, incoming) {
-  const map = new Map(local.map(e => [e.id, e]));
-  incoming.forEach(row => {
-    const incomingTs = row.updatedAt || "0";
-    const existing   = map.get(row.id);
-    const existingTs = existing?.updatedAt || "0";
-    if (!existing || incomingTs > existingTs) {
-      map.set(row.id, deriveRow({ ...row, tags: row.tags||[], updatedAt: row.updatedAt || new Date().toISOString() }));
-    }
-  });
-  return [...map.values()];
-}
-
-const fmt$  = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : null;
-const uid   = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
-const TODAY = () => new Date().toISOString().slice(0,10);
-const avg   = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
-const EMPTY = { product:"",brand:"",category:"",store:"",onSale:"",units:"",weight:"",unit:"",totalPrice:"",regPrice:"",notes:"",tags:[] };
-
-/* ── Tag Input ── */
-function TagInput({ tags, onChange, allTags }) {
-  const [input,    setInput]    = useState("");
-  const [focused,  setFocused]  = useState(false);
-  const [focusIdx, setFocusIdx] = useState(-1);
-  const inputRef = useRef();
-
-  const suggestions = useMemo(() => {
-    if (!input.trim()) return [];
-    const q = input.toLowerCase();
-    return allTags.filter(t => t.tag.toLowerCase().includes(q) && !tags.includes(t.tag)).slice(0, 6);
-  }, [input, allTags, tags]);
-
-  const addTag = tag => {
-    const clean = tag.trim().toLowerCase().replace(/\s+/g, "-");
-    if (clean && !tags.includes(clean)) onChange([...tags, clean]);
-    setInput(""); setFocusIdx(-1);
-  };
-  const removeTag = tag => onChange(tags.filter(t => t !== tag));
-  const handleKey = e => {
-    if ((e.key==="Enter"||e.key===",") && input.trim()) {
-      e.preventDefault();
-      focusIdx>=0&&suggestions[focusIdx] ? addTag(suggestions[focusIdx].tag) : addTag(input);
-    } else if (e.key==="Backspace"&&!input&&tags.length) { removeTag(tags[tags.length-1]); }
-    else if (e.key==="ArrowDown") { e.preventDefault(); setFocusIdx(i=>Math.min(i+1,suggestions.length-1)); }
-    else if (e.key==="ArrowUp")   { e.preventDefault(); setFocusIdx(i=>Math.max(i-1,-1)); }
-    else if (e.key==="Escape")    { setInput(""); setFocusIdx(-1); }
-  };
-
-  return (
-    <div>
-      <div className="tag-input-wrap" onClick={()=>inputRef.current?.focus()}>
-        {tags.map(t=>(
-          <span key={t} className="tag-chip">{t}
-            <button type="button" onClick={e=>{e.stopPropagation();removeTag(t);}}>×</button>
-          </span>
-        ))}
-        <input ref={inputRef} className="tag-input" value={input}
-          placeholder={tags.length?"":"e.g. sliced, honey, organic…"}
-          onChange={e=>{setInput(e.target.value);setFocusIdx(-1);}}
-          onKeyDown={handleKey}
-          onFocus={()=>setFocused(true)}
-          onBlur={()=>setTimeout(()=>{setFocused(false);setFocusIdx(-1);},150)} />
-      </div>
-      {focused&&suggestions.length>0&&(
-        <div className="tag-suggestions">
-          {suggestions.map((s,i)=>(
-            <div key={s.tag} className={`tag-suggestion${i===focusIdx?" focused":""}`}
-              onMouseDown={e=>{e.preventDefault();addTag(s.tag);}}>
-              <span>{s.tag}</span>
-              <span className="tag-suggestion-count">{s.count}×</span>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={{fontSize:11,color:"#475569",marginTop:5}}>Press Enter or comma to add · Backspace to remove</div>
-    </div>
-  );
-}
+const fmt$   = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : null;
+const uid    = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
+const TODAY  = () => new Date().toISOString().slice(0,10);
+const avg    = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+const EMPTY  = { product:"",brand:"",category:"",store:"",onSale:"",units:"",weight:"",unit:"",totalPrice:"",regPrice:"",notes:"" };
 
 /* ── App ── */
 function App() {
-  const [secret,      setSecret]      = useState(()=>localStorage.getItem("gt_secret")||"");
-  const [secretInput, setSecretInput] = useState("");
-  const [entries,     setEntries]     = useState(()=>{
+  const [entries, setEntries] = useState(() => {
     try {
+      // Migrate data from old key (gt_v2) if present
       const old = localStorage.getItem("gt_v2");
       if (old) {
         const parsed = JSON.parse(old);
-        if (Array.isArray(parsed)&&parsed.length) localStorage.setItem("gt_v3",old);
+        if (Array.isArray(parsed) && parsed.length) localStorage.setItem("gt_v3", old);
         localStorage.removeItem("gt_v2");
       }
       return JSON.parse(localStorage.getItem("gt_v3")||"[]");
     } catch { return []; }
   });
-  const [tab,          setTab]         = useState("db");
-  const [form,         setForm]        = useState({...EMPTY, date:TODAY()});
-  const [editId,       setEditId]      = useState(null);
-  const [sortBy,       setSortBy]      = useState("date");
-  const [storeFilter,  setStoreFilter] = useState("all");
-  const [searchQ,      setSearchQ]     = useState("");
-  const [tagFilter,    setTagFilter]   = useState(null);
-  const [analyticsTag, setAnalyticsTag]= useState(null);
-  const [syncStatus,   setSyncStatus]  = useState("idle");
-  const [lastSynced,   setLastSynced]  = useState(null);
-  const [toast,        setToast]       = useState(null);
-  const importRef  = useRef();
-  const searchRef  = useRef();
-  const pushTimer  = useRef(null);
-  const isFirstRender = useRef(true);
+  const [tab,        setTab]        = useState("db");
+  const [form,       setForm]       = useState({ ...EMPTY, date:TODAY() });
+  const [editId,     setEditId]     = useState(null);
+  const [sortBy,     setSortBy]     = useState("date");
+  const [storeFilter,setStoreFilter]= useState("all");
+  const [toast,      setToast]      = useState(null);
+  const importRef = useRef();
 
-  useEffect(()=>{ try { localStorage.setItem("gt_v3",JSON.stringify(entries)); } catch {} },[entries]);
-
-  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null),2600); };
-
-  /* ── Cloud pull ── */
-  const pullCloud = useCallback(async (sk) => {
-    const key = sk||secret; if (!key) return;
-    setSyncStatus("syncing");
-    try {
-      const res = await fetch(LAMBDA_URL, { headers:{"x-secret":key} });
-      if (res.status===403) { setSyncStatus("error"); showToast("❌ Wrong secret key"); return; }
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      const remote = data.entries||[];
-      setEntries(prev => {
-        const merged = mergeEntries(prev, remote);
-        // push merged result back so remote stays up to date
-        pushCloud(merged, key);
-        return merged;
-      });
-      setLastSynced(new Date()); setSyncStatus("synced");
-    } catch { setSyncStatus("error"); showToast("⚠️ Sync failed — working offline"); }
-  }, [secret]);
-
-  /* ── Cloud push ── */
-  const pushCloud = useCallback(async (entriesToPush, sk) => {
-    const key = sk||secret; if (!key) return;
-    setSyncStatus("syncing");
-    try {
-      const res = await fetch(LAMBDA_URL, {
-        method:"PUT",
-        headers:{"Content-Type":"application/json","x-secret":key},
-        body: JSON.stringify({entries: entriesToPush})
-      });
-      if (!res.ok) throw new Error();
-      setLastSynced(new Date()); setSyncStatus("synced");
-    } catch { setSyncStatus("error"); }
-  }, [secret]);
-
-  // Pull on mount (once secret is set)
-  useEffect(()=>{ if (secret) pullCloud(secret); },[]);
-
-  // Debounced push whenever entries change (skip initial mount)
-  useEffect(()=>{
-    if (isFirstRender.current) { isFirstRender.current=false; return; }
-    if (!secret) return;
-    clearTimeout(pushTimer.current);
-    pushTimer.current = setTimeout(()=>pushCloud(entries), 1500);
-    return ()=>clearTimeout(pushTimer.current);
+  useEffect(() => {
+    try { localStorage.setItem("gt_v3", JSON.stringify(entries)); } catch {}
   }, [entries]);
 
-  const allProducts = useMemo(()=>[...new Set(entries.map(e=>e.product).filter(Boolean))].sort(),[entries]);
-  const allBrands   = useMemo(()=>[...new Set(entries.map(e=>e.brand).filter(Boolean))].sort(),  [entries]);
-  const allStores   = useMemo(()=>[...new Set(entries.map(e=>e.store).filter(Boolean))].sort(),  [entries]);
-  const allCats     = useMemo(()=>[...new Set(entries.map(e=>e.category).filter(Boolean))].sort(),[entries]);
-  const allTags     = useMemo(()=>{
-    const counts={};
-    entries.forEach(e=>(e.tags||[]).forEach(t=>{counts[t]=(counts[t]||0)+1;}));
-    return Object.entries(counts).map(([tag,count])=>({tag,count})).sort((a,b)=>b.count-a.count);
-  },[entries]);
+  const showToast = msg => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2600);
+  };
+
+  const allProducts = useMemo(() => [...new Set(entries.map(e=>e.product).filter(Boolean))].sort(), [entries]);
+  const allBrands   = useMemo(() => [...new Set(entries.map(e=>e.brand).filter(Boolean))].sort(),   [entries]);
+  const allStores   = useMemo(() => [...new Set(entries.map(e=>e.store).filter(Boolean))].sort(),   [entries]);
+  const allCats     = useMemo(() => [...new Set(entries.map(e=>e.category).filter(Boolean))].sort(),[entries]);
 
   const sf = k => e => setForm(f=>({...f,[k]:e.target.value}));
 
   const save = () => {
     if (!form.product.trim()) return;
-    const row = deriveRow({...form, id:editId||uid(), tags:form.tags||[], updatedAt:new Date().toISOString()});
-    setEntries(prev=>editId?prev.map(e=>e.id===editId?row:e):[...prev,row]);
-    setForm({...EMPTY,date:TODAY()}); setEditId(null); setTab("db");
+    const row = deriveRow({ ...form, id: editId||uid() });
+    setEntries(prev => editId ? prev.map(e=>e.id===editId?row:e) : [...prev, row]);
+    setForm({ ...EMPTY, date:TODAY() }); setEditId(null); setTab("db");
   };
-  const startEdit = e => { setForm({...e,tags:e.tags||[]}); setEditId(e.id); setTab("add"); };
+
+  const startEdit = e => { setForm({...e}); setEditId(e.id); setTab("add"); };
   const cancel    = () => { setForm({...EMPTY,date:TODAY()}); setEditId(null); setTab("db"); };
   const del       = id => { if (window.confirm("Delete this entry?")) setEntries(p=>p.filter(e=>e.id!==id)); };
   const switchTab = id => { if(id!=="add"){setEditId(null);setForm({...EMPTY,date:TODAY()});} setTab(id); };
-  const filterByTag = tag => { setTagFilter(tag); setSearchQ(""); };
 
-  const saveSecret = () => {
-    const s = secretInput.trim(); if (!s) return;
-    localStorage.setItem("gt_secret",s);
-    setSecret(s);
-    pullCloud(s);
-  };
-
-  /* File export */
+  /* ── Export ── */
   const exportData = () => {
-    const blob = new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),entries},null,2)],{type:"application/json"});
+    const payload = { version:1, exportedAt: new Date().toISOString(), entries };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
-    a.href=url; a.download=`grocery-tracker-${TODAY()}.json`; a.click();
-    URL.revokeObjectURL(url); showToast("✅ Exported!");
+    a.href = url;
+    a.download = `grocery-tracker-${TODAY()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("✅ Exported!");
   };
 
-  /* File import */
+  /* ── Import (merge by id, newer wins) ── */
   const importData = e => {
-    const file=e.target.files[0]; if (!file) return;
-    const reader=new FileReader();
-    reader.onload=ev=>{
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
       try {
-        const parsed=JSON.parse(ev.target.result);
-        const incoming=parsed.entries||parsed;
-        if (!Array.isArray(incoming)) throw new Error();
-        setEntries(prev=>mergeEntries(prev,incoming));
+        const parsed = JSON.parse(ev.target.result);
+        const incoming = parsed.entries || parsed; // support bare array too
+        if (!Array.isArray(incoming)) throw new Error("Invalid format");
+        setEntries(prev => {
+          const map = new Map(prev.map(e=>[e.id, e]));
+          incoming.forEach(row => {
+            if (!map.has(row.id)) map.set(row.id, deriveRow(row));
+            // if duplicate id, keep existing (or swap logic if you prefer newer)
+          });
+          return [...map.values()];
+        });
         showToast(`✅ Imported ${incoming.length} entries (merged)`);
-      } catch { showToast("❌ Import failed — invalid file"); }
+      } catch {
+        showToast("❌ Import failed — invalid file");
+      }
     };
-    reader.readAsText(file); e.target.value="";
+    reader.readAsText(file);
+    e.target.value = ""; // reset so same file can be re-imported
   };
 
-  const filtered = useMemo(()=>{
-    const q=searchQ.toLowerCase();
-    return entries
-      .filter(e=>{
-        if (storeFilter!=="all"&&e.store!==storeFilter) return false;
-        if (tagFilter&&!(e.tags||[]).includes(tagFilter)) return false;
-        if (!q) return true;
-        return (e.product||"").toLowerCase().includes(q)||(e.brand||"").toLowerCase().includes(q)||
-               (e.category||"").toLowerCase().includes(q)||(e.store||"").toLowerCase().includes(q)||
-               (e.tags||[]).some(t=>t.includes(q));
-      })
-      .sort((a,b)=>{
-        if (sortBy==="date")    return (b.date||"").localeCompare(a.date||"");
-        if (sortBy==="product") return (a.product||"").localeCompare(b.product||"");
-        if (sortBy==="brand")   return (a.brand||"").localeCompare(b.brand||"");
-        if (sortBy==="price")   return parseFloat(a.totalPrice)-parseFloat(b.totalPrice);
-        return 0;
-      });
-  },[entries,storeFilter,searchQ,tagFilter,sortBy]);
+  const filtered = useMemo(() => entries
+    .filter(e => storeFilter==="all" || e.store===storeFilter)
+    .sort((a,b) => {
+      if (sortBy==="date")    return (b.date||"").localeCompare(a.date||"");
+      if (sortBy==="product") return (a.product||"").localeCompare(b.product||"");
+      if (sortBy==="brand")   return (a.brand||"").localeCompare(b.brand||"");
+      if (sortBy==="price")   return parseFloat(a.totalPrice)-parseFloat(b.totalPrice);
+      return 0;
+    }), [entries, storeFilter, sortBy]);
 
-  const productAnalytics = useMemo(()=>{
-    const base = analyticsTag ? entries.filter(e=>(e.tags||[]).includes(analyticsTag)) : entries;
-    const products=[...new Set(base.map(e=>e.product).filter(Boolean))].sort();
-    return products.map(p=>{
-      const pRows=base.filter(e=>e.product===p);
-      const prices=pRows.map(r=>parseFloat(r.totalPrice)).filter(x=>!isNaN(x));
-      const brandsInProduct=[...new Set(pRows.map(e=>e.brand||"(no brand)"))].sort();
-      const brandData=brandsInProduct.map(b=>{
-        const bRows=pRows.filter(e=>(e.brand||"(no brand)")===b);
-        const bPrices=bRows.map(r=>parseFloat(r.totalPrice)).filter(x=>!isNaN(x));
-        const ppkg=bRows.map(r=>r.pricePerKg).filter(x=>x!=null);
-        const byStore={};
-        bRows.forEach(r=>{ if(r.store&&!isNaN(parseFloat(r.totalPrice))){ byStore[r.store]=byStore[r.store]||[]; byStore[r.store].push(parseFloat(r.totalPrice)); } });
-        const storeAvgs=Object.entries(byStore).map(([s,ps])=>({store:s,avg:avg(ps)})).sort((a,b)=>a.avg-b.avg);
-        const maxAvg=storeAvgs.length?storeAvgs.at(-1).avg:1;
-        return {brand:b,count:bRows.length,avgPrice:avg(bPrices),minPrice:Math.min(...bPrices)||null,maxPrice:Math.max(...bPrices)||null,avgPpkg:avg(ppkg),storeAvgs,maxAvg};
+  /* ── Analytics: group by product → brand → store ── */
+  const productAnalytics = useMemo(() => allProducts.map(p => {
+    const pRows = entries.filter(e=>e.product===p);
+    const prices = pRows.map(r=>parseFloat(r.totalPrice)).filter(x=>!isNaN(x));
+
+    // brands within this product
+    const brandsInProduct = [...new Set(pRows.map(e=>e.brand||"(no brand)"))].sort();
+    const brandData = brandsInProduct.map(b => {
+      const bRows = pRows.filter(e=>(e.brand||"(no brand)")===b);
+      const bPrices = bRows.map(r=>parseFloat(r.totalPrice)).filter(x=>!isNaN(x));
+      const ppkg    = bRows.map(r=>r.pricePerKg).filter(x=>x!=null);
+
+      // stores for this brand
+      const byStore = {};
+      bRows.forEach(r => {
+        if (r.store && !isNaN(parseFloat(r.totalPrice))) {
+          byStore[r.store]=byStore[r.store]||[];
+          byStore[r.store].push(parseFloat(r.totalPrice));
+        }
       });
-      return {product:p,count:pRows.length,avgPrice:avg(prices),brandData};
+      const storeAvgs = Object.entries(byStore).map(([s,ps])=>({store:s,avg:avg(ps)})).sort((a,b)=>a.avg-b.avg);
+      const maxAvg = storeAvgs.length ? storeAvgs.at(-1).avg : 1;
+      return { brand:b, count:bRows.length, avgPrice:avg(bPrices), minPrice:Math.min(...bPrices)||null, maxPrice:Math.max(...bPrices)||null, avgPpkg:avg(ppkg), storeAvgs, maxAvg };
     });
-  },[entries,analyticsTag]);
+
+    const ppkgAll = pRows.map(r=>r.pricePerKg).filter(x=>x!=null);
+    return { product:p, count:pRows.length, avgPrice:avg(prices), minPrice:prices.length?Math.min(...prices):null, maxPrice:prices.length?Math.max(...prices):null, avgPpkg:avg(ppkgAll), brandData };
+  }), [entries, allProducts]);
 
   const preview = deriveRow(form);
-
-  const syncLabel = syncStatus==="syncing" ? <><span className="spin">⚙️</span> Syncing…</>
-                  : syncStatus==="synced"  ? `✓ ${lastSynced?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`
-                  : syncStatus==="error"   ? "⚠️ Sync error"
-                  : "○ Not synced";
-
-  /* ── First launch: no secret ── */
-  if (!secret) return (
-    <div className="setup-screen">
-      <div className="setup-icon">🔑</div>
-      <div className="setup-title">Enter your sync key</div>
-      <div className="setup-desc">This is the secret you set in the Lambda function. It stays on your device only — it's never stored anywhere except your browser.</div>
-      <input className="setup-input" type="password" placeholder="Your secret key…"
-        value={secretInput} onChange={e=>setSecretInput(e.target.value)}
-        onKeyDown={e=>e.key==="Enter"&&saveSecret()} autoFocus />
-      <button className="btn btn-primary" style={{maxWidth:320}} onClick={saveSecret}>Connect →</button>
-    </div>
-  );
 
   return (
     <div style={{display:"flex",flexDirection:"column",minHeight:"100vh"}}>
 
       {/* Header */}
       <div className="header">
-        <div className="header-top">
-          <div className="logo">🛒 Grocery Tracker</div>
-          <span className={`sync-pill ${syncStatus}`}>{syncLabel}</span>
-        </div>
+        <div className="logo">🛒 Grocery Tracker</div>
         <div className="stats">{entries.length} entries · {allProducts.length} products · {allStores.length} stores</div>
         <nav className="nav">
-          {[["db","🗂️","Database"],["add","➕","Add"],["analytics","📊","Analytics"],["sync","☁️","Sync"]].map(([id,icon,lbl])=>(
+          {[["db","🗂️","Database"],["add","➕","Add"],["analytics","📊","Analytics"],["sync","☁️","Share"]].map(([id,icon,lbl])=>(
             <button key={id} className={`nav-btn${tab===id?" active":""}`} onClick={()=>switchTab(id)}>
               <span className="nav-icon">{icon}</span>
               <span className="nav-label">{lbl}</span>
@@ -497,23 +319,13 @@ function App() {
       {/* ── DATABASE ── */}
       {tab==="db" && (
         <div className="page">
-          <div className="search-wrap">
-            <span className="search-icon">🔍</span>
-            <input ref={searchRef} value={searchQ}
-              onChange={e=>{setSearchQ(e.target.value);setTagFilter(null);}}
-              placeholder="Search product, brand, tag…" />
-            {searchQ&&<button className="search-clear" onClick={()=>{setSearchQ("");searchRef.current?.focus();}}>×</button>}
-          </div>
-          {tagFilter&&(
-            <div className="tag-filter-banner">
-              <span>🏷️ Tag: <strong>{tagFilter}</strong></span>
-              <button onClick={()=>setTagFilter(null)}>×</button>
-            </div>
-          )}
           <div className="filter-bar">
             <button className={`filter-chip${storeFilter==="all"?" active":""}`} onClick={()=>setStoreFilter("all")}>All stores</button>
-            {allStores.map(s=><button key={s} className={`filter-chip${storeFilter===s?" active":""}`} onClick={()=>setStoreFilter(s)}>{s}</button>)}
+            {allStores.map(s=>(
+              <button key={s} className={`filter-chip${storeFilter===s?" active":""}`} onClick={()=>setStoreFilter(s)}>{s}</button>
+            ))}
           </div>
+
           <div className="sort-row">
             <label>Sort by</label>
             <select value={sortBy} onChange={e=>setSortBy(e.target.value)}>
@@ -523,36 +335,36 @@ function App() {
               <option value="price">Price (low–high)</option>
             </select>
           </div>
+
           {filtered.length===0
-            ? <div className="empty"><div className="empty-icon">{entries.length===0?"🛒":"🔍"}</div><div className="empty-text">{entries.length===0?"No entries yet.\nTap Add to get started.":"No results found."}</div></div>
+            ? <div className="empty"><div className="empty-icon">🛒</div><div className="empty-text">No entries yet.<br/>Tap <strong>Add</strong> to get started.</div></div>
             : filtered.map(e=>(
-              <div className="entry-card" key={e.id}>
-                <div className="entry-top">
-                  <div style={{minWidth:0}}>
-                    <div className="entry-product">{e.product}</div>
-                    {e.brand&&<div className="entry-brand">{e.brand}</div>}
-                    <div className="entry-meta">
-                      {[e.store,e.category,e.date].filter(Boolean).join(" · ")}
-                      {e.onSale==="Y"&&<> &nbsp;<span className="sale-badge">SALE</span></>}
+                <div className="entry-card" key={e.id}>
+                  <div className="entry-top">
+                    <div style={{minWidth:0}}>
+                      <div className="entry-product">{e.product}</div>
+                      {e.brand && <div className="entry-brand">{e.brand}</div>}
+                      <div className="entry-meta">
+                        {[e.store, e.category, e.date].filter(Boolean).join(" · ")}
+                        {e.onSale==="Y" && <> &nbsp;<span className="sale-badge">SALE</span></>}
+                      </div>
+                    </div>
+                    <div className="entry-actions">
+                      <button className="btn btn-secondary btn-sm" onClick={()=>startEdit(e)}>✏️</button>
+                      <button className="btn btn-danger btn-sm"    onClick={()=>del(e.id)}>🗑️</button>
                     </div>
                   </div>
-                  <div className="entry-actions">
-                    <button className="btn btn-secondary btn-sm" onClick={()=>startEdit(e)}>✏️</button>
-                    <button className="btn btn-danger btn-sm"    onClick={()=>del(e.id)}>🗑️</button>
+                  <div className="entry-prices">
+                    {fmt$(e.totalPrice)   && <div className="price-pill main"><span className="plbl">Total</span><span className="pval">{fmt$(e.totalPrice)}</span></div>}
+                    {fmt$(e.pricePerUnit) && <div className="price-pill"><span className="plbl">/ unit</span><span className="pval">{fmt$(e.pricePerUnit)}</span></div>}
+                    {fmt$(e.pricePer100g) && <div className="price-pill"><span className="plbl">/ 100g</span><span className="pval">{fmt$(e.pricePer100g)}</span></div>}
+                    {fmt$(e.pricePerKg)   && <div className="price-pill"><span className="plbl">/ kg</span><span className="pval">{fmt$(e.pricePerKg)}</span></div>}
+                    {e.saving>0           && <div className="price-pill"><span className="plbl">Saving</span><span className="pval" style={{color:"#4ade80"}}>{fmt$(e.saving)}</span></div>}
+                    {e.weight&&e.unit     && <div className="price-pill"><span className="plbl">Size</span><span className="pval">{e.weight}{e.unit}</span></div>}
                   </div>
+                  {e.notes && <div style={{marginTop:8,fontSize:12,color:"#64748b"}}>📝 {e.notes}</div>}
                 </div>
-                <div className="entry-prices">
-                  {fmt$(e.totalPrice)   &&<div className="price-pill main"><span className="plbl">Total</span><span className="pval">{fmt$(e.totalPrice)}</span></div>}
-                  {fmt$(e.pricePerUnit) &&<div className="price-pill"><span className="plbl">/ unit</span><span className="pval">{fmt$(e.pricePerUnit)}</span></div>}
-                  {fmt$(e.pricePer100g) &&<div className="price-pill"><span className="plbl">/ 100g</span><span className="pval">{fmt$(e.pricePer100g)}</span></div>}
-                  {fmt$(e.pricePerKg)   &&<div className="price-pill"><span className="plbl">/ kg</span><span className="pval">{fmt$(e.pricePerKg)}</span></div>}
-                  {e.saving>0           &&<div className="price-pill"><span className="plbl">Saving</span><span className="pval" style={{color:"#4ade80"}}>{fmt$(e.saving)}</span></div>}
-                  {e.weight&&e.unit     &&<div className="price-pill"><span className="plbl">Size</span><span className="pval">{e.weight}{e.unit}</span></div>}
-                </div>
-                {(e.tags||[]).length>0&&<div className="entry-tags">{(e.tags||[]).map(t=><span key={t} className="entry-tag" onClick={()=>filterByTag(t)}>#{t}</span>)}</div>}
-                {e.notes&&<div style={{marginTop:8,fontSize:12,color:"#64748b"}}>📝 {e.notes}</div>}
-              </div>
-            ))
+              ))
           }
         </div>
       )}
@@ -562,63 +374,93 @@ function App() {
         <div className="page">
           <div className="card">
             <h2 style={{fontSize:18,fontWeight:800,color:"#60a5fa",marginBottom:20}}>{editId?"✏️ Edit Entry":"➕ New Entry"}</h2>
+
             <div className="field-row cols-2">
-              <div><label className="lbl">Date</label><input type="date" value={form.date||""} onChange={sf("date")} /></div>
-              <div><label className="lbl">On Sale?</label>
+              <div>
+                <label className="lbl">Date</label>
+                <input type="date" value={form.date||""} onChange={sf("date")} />
+              </div>
+              <div>
+                <label className="lbl">On Sale?</label>
                 <select value={form.onSale||""} onChange={sf("onSale")}>
-                  <option value="">—</option><option value="Y">✅ Yes</option><option value="N">No</option>
+                  <option value="">—</option>
+                  <option value="Y">✅ Yes</option>
+                  <option value="N">No</option>
                 </select>
               </div>
             </div>
+
             <div className="field">
-              <label className="lbl">Product Name <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— generic, e.g. "Ham"</span></label>
-              <input value={form.product||""} onChange={sf("product")} placeholder="e.g. Ham, Milk, Cereal" list="prod-list" />
+              <label className="lbl">Product Name <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— generic name, e.g. "Butter"</span></label>
+              <input value={form.product||""} onChange={sf("product")} placeholder="e.g. Butter, Milk, Pasta" list="prod-list" />
               <datalist id="prod-list">{allProducts.map(p=><option key={p} value={p}/>)}</datalist>
             </div>
+
             <div className="field">
-              <label className="lbl">Brand</label>
-              <input value={form.brand||""} onChange={sf("brand")} placeholder="e.g. Maple Leaf, No Name…" list="brand-list" />
+              <label className="lbl">Brand <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— e.g. "Lactantia"</span></label>
+              <input value={form.brand||""} onChange={sf("brand")} placeholder="e.g. Natrel, PC, No Name…" list="brand-list" />
               <datalist id="brand-list">{allBrands.map(b=><option key={b} value={b}/>)}</datalist>
             </div>
-            <div className="field">
-              <label className="lbl">Tags <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— variants, e.g. "black-forest, sliced"</span></label>
-              <TagInput tags={form.tags||[]} onChange={tags=>setForm(f=>({...f,tags}))} allTags={allTags} />
-            </div>
+
             <div className="field-row cols-2">
-              <div><label className="lbl">Store</label>
+              <div>
+                <label className="lbl">Store</label>
                 <input value={form.store||""} onChange={sf("store")} placeholder="e.g. Metro" list="store-list" />
                 <datalist id="store-list">{allStores.map(s=><option key={s} value={s}/>)}</datalist>
               </div>
-              <div><label className="lbl">Category</label>
-                <input value={form.category||""} onChange={sf("category")} placeholder="e.g. Meat" list="cat-list" />
+              <div>
+                <label className="lbl">Category</label>
+                <input value={form.category||""} onChange={sf("category")} placeholder="e.g. Dairy" list="cat-list" />
                 <datalist id="cat-list">{allCats.map(c=><option key={c} value={c}/>)}</datalist>
               </div>
             </div>
+
             <div className="field-row cols-3">
-              <div><label className="lbl">Weight</label><input type="number" value={form.weight||""} onChange={sf("weight")} placeholder="500" /></div>
-              <div><label className="lbl">Unit</label>
+              <div>
+                <label className="lbl">Weight</label>
+                <input type="number" value={form.weight||""} onChange={sf("weight")} placeholder="500" />
+              </div>
+              <div>
+                <label className="lbl">Unit</label>
                 <select value={form.unit||""} onChange={sf("unit")}>
                   {["","g","kg","mL","L","oz","lb"].map(u=><option key={u} value={u}>{u||"—"}</option>)}
                 </select>
               </div>
-              <div><label className="lbl"># Units</label><input type="number" min="1" value={form.units||""} onChange={sf("units")} placeholder="1" /></div>
+              <div>
+                <label className="lbl"># Units</label>
+                <input type="number" min="1" value={form.units||""} onChange={sf("units")} placeholder="1" />
+              </div>
             </div>
+
             <div className="field-row cols-2">
-              <div><label className="lbl">Total Price ($)</label><input type="number" step="0.01" value={form.totalPrice||""} onChange={sf("totalPrice")} placeholder="4.99" /></div>
-              <div><label className="lbl">Regular Price ($)</label><input type="number" step="0.01" value={form.regPrice||""} onChange={sf("regPrice")} placeholder="6.99" /></div>
+              <div>
+                <label className="lbl">Total Price ($)</label>
+                <input type="number" step="0.01" value={form.totalPrice||""} onChange={sf("totalPrice")} placeholder="4.99" />
+              </div>
+              <div>
+                <label className="lbl">Regular Price ($)</label>
+                <input type="number" step="0.01" value={form.regPrice||""} onChange={sf("regPrice")} placeholder="6.99" />
+              </div>
             </div>
-            <div className="field"><label className="lbl">Notes</label><input value={form.notes||""} onChange={sf("notes")} placeholder="Optional" /></div>
-            {form.totalPrice&&(
+
+            <div className="field">
+              <label className="lbl">Notes</label>
+              <input value={form.notes||""} onChange={sf("notes")} placeholder="Optional" />
+            </div>
+
+            {form.totalPrice && (
               <div className="calc-preview">
                 <div style={{width:"100%",fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:0.8,marginBottom:4}}>Auto-calculated</div>
                 {[["$/unit",preview.pricePerUnit],["$/100g",preview.pricePer100g],["$/kg",preview.pricePerKg],["Saving",preview.saving]].map(([l,v])=>v!=null?(
                   <div key={l} style={{display:"flex",flexDirection:"column",gap:2}}>
-                    <span className="calc-lbl">{l}</span><span className="calc-val">{fmt$(v)}</span>
+                    <span className="calc-lbl">{l}</span>
+                    <span className="calc-val">{fmt$(v)}</span>
                   </div>
                 ):null)}
               </div>
             )}
-            <button className="btn btn-primary" onClick={save}>{editId?"Save Changes":"Add Entry"}</button>
+
+            <button className="btn btn-primary"   onClick={save}>{editId?"Save Changes":"Add Entry"}</button>
             <button className="btn btn-secondary" onClick={cancel}>Cancel</button>
           </div>
         </div>
@@ -631,96 +473,106 @@ function App() {
             ? <div className="empty"><div className="empty-icon">📊</div><div className="empty-text">No data yet.</div></div>
             : <>
                 <div className="stat-grid">
-                  {[["Entries",entries.length,"#60a5fa"],["Products",allProducts.length,"#4ade80"],["Brands",allBrands.length,"#a78bfa"],["Stores",allStores.length,"#fbbf24"]].map(([lbl,val,color])=>(
+                  {[
+                    ["Entries",   entries.length,                           "#60a5fa"],
+                    ["Products",  allProducts.length,                       "#4ade80"],
+                    ["Brands",    allBrands.length,                         "#a78bfa"],
+                    ["Stores",    allStores.length,                         "#fbbf24"],
+                  ].map(([lbl,val,color])=>(
                     <div key={lbl} className="stat-card" style={{borderTop:`3px solid ${color}`}}>
                       <div className="stat-val" style={{color}}>{val}</div>
                       <div className="stat-lbl">{lbl}</div>
                     </div>
                   ))}
                 </div>
-                {allTags.length>0&&(
-                  <div className="card" style={{padding:"12px 14px"}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>Filter by tag</div>
-                    <div className="analytics-tag-bar">
-                      <button className={`analytics-tag-chip${!analyticsTag?" active":""}`} onClick={()=>setAnalyticsTag(null)}>All</button>
-                      {allTags.map(({tag,count})=>(
-                        <button key={tag} className={`analytics-tag-chip${analyticsTag===tag?" active":""}`} onClick={()=>setAnalyticsTag(analyticsTag===tag?null:tag)}>
-                          #{tag} <span style={{opacity:0.5,marginLeft:3}}>{count}</span>
-                        </button>
+
+                <div className="card">
+                  <div className="section-title">Price breakdown</div>
+                  {productAnalytics.sort((a,b)=>a.product.localeCompare(b.product)).map(p=>(
+                    <div key={p.product} className="product-row">
+                      <div className="product-name">{p.product} <span style={{fontWeight:400,color:"#64748b",fontSize:12}}>({p.count} record{p.count!==1?"s":""})</span></div>
+
+                      {/* Product-level summary — only shown when there are multiple brands */}
+                      {p.brandData.length > 1 && (
+                        <div style={{display:"flex",gap:12,flexWrap:"wrap",margin:"6px 0 2px",paddingLeft:2}}>
+                          {[["All brands avg",p.avgPrice],["Min",p.minPrice],["Max",p.maxPrice],["Avg $/kg",p.avgPpkg]].map(([l,v])=>fmt$(v)?(
+                            <div key={l} style={{fontSize:13}}>
+                              <span style={{color:"#64748b",fontSize:11}}>{l} </span>
+                              <strong style={{color:l==="Min"?"#4ade80":l==="Max"?"#f87171":"#e2e8f0"}}>{fmt$(v)}</strong>
+                            </div>
+                          ):null)}
+                        </div>
+                      )}
+
+                      {p.brandData.map(b=>(
+                        <div key={b.brand} className="brand-block">
+                          <div className="brand-title">
+                            {b.brand}
+                            {[["avg",b.avgPrice],["min",b.minPrice],["$/kg",b.avgPpkg]].map(([l,v])=>fmt$(v)?(
+                              <span key={l} style={{fontWeight:400,color:"#94a3b8",marginLeft:8,fontSize:11}}>{l} <strong style={{color:"#e2e8f0"}}>{fmt$(v)}</strong></span>
+                            ):null)}
+                          </div>
+
+                          {b.storeAvgs.length > 0 && (
+                            <div className="store-bars">
+                              {b.storeAvgs.map((sv,i)=>(
+                                <div key={sv.store} className="store-bar">
+                                  <div className="store-name" style={{color:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#94a3b8"}}>
+                                    {i===0&&b.storeAvgs.length>1 ? "✓ " : ""}{sv.store}
+                                  </div>
+                                  <div className="bar-track">
+                                    <div className="bar-fill" style={{
+                                      width:`${(sv.avg/b.maxAvg*100).toFixed(1)}%`,
+                                      background: i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#3b82f6"
+                                    }}/>
+                                  </div>
+                                  <div className="store-price" style={{color:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#e2e8f0"}}>{fmt$(sv.avg)}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </div>
-                  </div>
-                )}
-                <div className="card">
-                  <div className="section-title">Price breakdown{analyticsTag?` — #${analyticsTag}`:""}</div>
-                  {productAnalytics.length===0
-                    ? <div style={{color:"#64748b",fontSize:13}}>No entries match this tag.</div>
-                    : productAnalytics.map(p=>(
-                      <div key={p.product} className="product-row">
-                        <div className="product-name">{p.product} <span style={{fontWeight:400,color:"#64748b",fontSize:12}}>({p.count} record{p.count!==1?"s":""})</span></div>
-                        {p.brandData.map(b=>(
-                          <div key={b.brand} className="brand-block">
-                            <div className="brand-title">{b.brand}
-                              {[["avg",b.avgPrice],["min",b.minPrice],["$/kg",b.avgPpkg]].map(([l,v])=>fmt$(v)?(
-                                <span key={l} style={{fontWeight:400,color:"#94a3b8",marginLeft:8,fontSize:11}}>{l} <strong style={{color:"#e2e8f0"}}>{fmt$(v)}</strong></span>
-                              ):null)}
-                            </div>
-                            {b.storeAvgs.length>0&&(
-                              <div className="store-bars">
-                                {b.storeAvgs.map((sv,i)=>(
-                                  <div key={sv.store} className="store-bar">
-                                    <div className="store-name" style={{color:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#94a3b8"}}>
-                                      {i===0&&b.storeAvgs.length>1?"✓ ":""}{sv.store}
-                                    </div>
-                                    <div className="bar-track"><div className="bar-fill" style={{width:`${(sv.avg/b.maxAvg*100).toFixed(1)}%`,background:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#3b82f6"}}/></div>
-                                    <div className="store-price" style={{color:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#e2e8f0"}}>{fmt$(sv.avg)}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ))
-                  }
+                  ))}
                 </div>
               </>
           }
         </div>
       )}
 
-      {/* ── SYNC TAB ── */}
+      {/* ── SHARE / SYNC ── */}
       {tab==="sync" && (
         <div className="page">
           <div className="card">
-            <div className="section-title">Cloud sync</div>
+            <div className="section-title">Export</div>
             <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>
-              Syncs automatically on open and 1.5s after every save. Both you and your mom use the same Lambda URL and secret — last edit always wins.
+              Download your database as a <strong style={{color:"#e2e8f0"}}>.json</strong> file. Send it to your mom (AirDrop, iMessage, email) — she can import it on her end to merge your data.
             </p>
-            <div style={{background:"#0d1117",borderRadius:10,padding:"12px 14px",marginBottom:14,fontSize:13,color:"#64748b",lineHeight:1.8}}>
-              <div>Status: <strong style={{color:syncStatus==="synced"?"#4ade80":syncStatus==="error"?"#fca5a5":"#93c5fd"}}>{syncStatus}</strong></div>
-              {lastSynced&&<div>Last synced: <strong style={{color:"#e2e8f0"}}>{lastSynced.toLocaleTimeString()}</strong></div>}
-              <div>Entries in database: <strong style={{color:"#e2e8f0"}}>{entries.length}</strong></div>
-            </div>
-            <button className="btn btn-primary" onClick={()=>pullCloud(secret)}>🔄 Sync now</button>
+            <button className="btn btn-success" onClick={exportData}>⬇️ Export my data</button>
           </div>
+
           <div className="card">
-            <div className="section-title">Change secret key</div>
-            <p style={{fontSize:14,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>Update the key saved on this device.</p>
-            <input type="password" placeholder="New secret key…" value={secretInput} onChange={e=>setSecretInput(e.target.value)} style={{marginBottom:10}} />
-            <button className="btn btn-warning" onClick={saveSecret}>Update key</button>
-          </div>
-          <div className="card">
-            <div className="section-title">File backup</div>
-            <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>Download or restore a local backup, independent of cloud sync.</p>
-            <button className="btn btn-success" onClick={exportData}>⬇️ Export backup</button>
+            <div className="section-title">Import</div>
+            <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>
+              Import a <strong style={{color:"#e2e8f0"}}>.json</strong> file from someone else. Entries are <strong style={{color:"#e2e8f0"}}>merged</strong> — your existing data is never deleted.
+            </p>
             <input ref={importRef} type="file" accept=".json,application/json" style={{display:"none"}} onChange={importData} />
-            <button className="btn btn-secondary" onClick={()=>importRef.current.click()}>⬆️ Import backup</button>
+            <button className="btn btn-warning" onClick={()=>importRef.current.click()}>⬆️ Import a file</button>
+          </div>
+
+          <div className="card" style={{borderColor:"#1e3a5f",opacity:0.7}}>
+            <div className="section-title" style={{color:"#475569"}}>☁️ Cloud sync (future)</div>
+            <p style={{fontSize:14,color:"#475569",lineHeight:1.6}}>
+              When you're ready, you can replace the file-based export/import with an AWS S3 bucket. The workflow would be: both of you point to the same S3 JSON file — the app fetches on open and pushes on change. Ask me to build that when you have an S3 bucket set up.
+            </p>
           </div>
         </div>
       )}
 
-      {toast&&<div className="toast">{toast}</div>}
+      {/* Toast */}
+      {toast && <div className="toast">{toast}</div>}
+
     </div>
   );
 }
