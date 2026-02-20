@@ -519,75 +519,22 @@ function App() {
   };
 
   const scanProductImage = async (base64Image, mediaType) => {
-    // ⚠️ IMPORTANT: This calls Claude API directly from the browser
-    // For production, you MUST use a backend proxy to keep your API key secret!
-    // Replace this URL with your own serverless function endpoint
+    // Call your Lambda function to scan the image
+    const response = await fetch(LAMBDA_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        image: base64Image, 
+        mediaType: mediaType 
+      })
+    });
     
-    const API_ENDPOINT = "YOUR_BACKEND_PROXY_URL_HERE"; // e.g., Vercel/Cloudflare/AWS Lambda
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Scan failed (${response.status})`);
+    }
     
-    // Example: If you had a backend proxy, it would look like this:
-    // const response = await fetch(API_ENDPOINT, {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({ image: base64Image, mediaType })
-    // });
-    
-    // For demo purposes, here's what the backend would do:
-    // It would call: https://api.anthropic.com/v1/messages with:
-    const apiRequestBody = {
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: mediaType,
-              data: base64Image
-            }
-          },
-          {
-            type: "text",
-            text: `Extract product information from this grocery store image. Look for:
-- Product name (generic, e.g., "Grape Jelly" not brand)
-- Brand name
-- Price (number only)
-- Size/weight (number only)
-- Unit (g, kg, mL, L, oz, lb)
-- Whether it's on sale
-
-Return ONLY a JSON object, no other text:
-{
-  "product": "product name",
-  "brand": "brand name", 
-  "price": 6.47,
-  "size": 500,
-  "unit": "mL",
-  "sale": false,
-  "notes": "any relevant details"
-}`
-          }
-        ]
-      }]
-    };
-
-    // ⚠️ DEMO ONLY - This will fail without a backend proxy!
-    // Uncomment and configure your backend endpoint above
-    throw new Error("Backend proxy not configured. See scanProductImage() function for setup instructions.");
-    
-    // When you have a backend proxy set up, it should:
-    // 1. Receive the image data
-    // 2. Call Claude API with your API key (server-side only!)
-    // 3. Parse the JSON response
-    // 4. Return the extracted data
-    
-    // Example response handling:
-    // const data = await response.json();
-    // const textContent = data.content.find(c => c.type === "text")?.text;
-    // const parsed = JSON.parse(textContent.replace(/```json\n?|```/g, ""));
-    // return parsed;
+    return await response.json();
   };
 
   const filtered = useMemo(() => {
