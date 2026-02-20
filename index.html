@@ -163,7 +163,7 @@
   .store-name { font-size: 13px; color: #94a3b8; width: 100px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar-track  { flex: 1; background: #1e3a5f; border-radius: 999px; height: 8px; overflow: hidden; }
   .bar-fill   { height: 100%; border-radius: 999px; }
-  .store-price { font-size: 13px; font-weight: 700; width: 55px; text-align: right; }
+  .store-price { font-size: 13px; font-weight: 700; width: 75px; text-align: right; }
 
   .empty { text-align: center; padding: 48px 16px; color: #475569; }
   .empty-icon { font-size: 48px; margin-bottom: 12px; }
@@ -212,9 +212,31 @@ function deriveRow(row) {
 }
 
 const fmt$   = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : null;
+const fmt$3  = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(3)}` : null;
 const uid    = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
 const TODAY  = () => new Date().toISOString().slice(0,10);
 const avg    = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+const minSafe = arr => arr.length ? Math.min(...arr) : null;
+const maxSafe = arr => arr.length ? Math.max(...arr) : null;
+
+/* Determine the best display unit for a set of entries and convert $/kg values */
+function bestUnitLabel(rows) {
+  const unitCounts = {};
+  rows.forEach(r => { if (r.unit) { const u = (r.unit||"").toLowerCase(); unitCounts[u] = (unitCounts[u]||0)+1; } });
+  const sorted = Object.entries(unitCounts).sort((a,b)=>b[1]-a[1]);
+  if (!sorted.length) return null;
+  const top = sorted[0][0];
+  // Map unit → { label for display, multiplier to convert $/kg → $/display }
+  const map = {
+    "g":  { label:"$/100g", mult: 1/10 },
+    "kg": { label:"$/kg",   mult: 1 },
+    "ml": { label:"$/100mL",mult: 1/10 },
+    "l":  { label:"$/L",    mult: 1 },
+    "oz": { label:"$/oz",   mult: 0.0283495 },
+    "lb": { label:"$/lb",   mult: 0.453592 },
+  };
+  return map[top] || map["g"];
+}
 const EMPTY  = { product:"",brand:"",category:"",store:"",onSale:"",units:"",weight:"",unit:"",totalPrice:"",regPrice:"",notes:"",tags:[] };
 
 const LAMBDA_URL = "https://3jdo4h6d3mmemlnpte734n3wny0shxzn.lambda-url.ca-central-1.on.aws/";
@@ -315,11 +337,13 @@ function App() {
   const [searchQ,    setSearchQ]    = useState("");
   const [tagFilter,  setTagFilter]  = useState(null);
   const [analyticsTag,setAnalyticsTag]= useState(null);
+  const [analyticsSearch,setAnalyticsSearch]= useState("");
   const [syncStatus,  setSyncStatus]  = useState("idle");
   const [lastSynced,  setLastSynced]  = useState(null);
   const [toast,      setToast]      = useState(null);
   const importRef = useRef();
   const searchRef = useRef();
+  const analyticsSearchRef = useRef();
   const pushTimer = useRef(null);
   const isFirstRender = useRef(true);
 
@@ -471,12 +495,33 @@ function App() {
     const pRows = base.filter(e=>e.product===p);
     const prices = pRows.map(r=>parseFloat(r.totalPrice)).filter(x=>!isNaN(x));
 
+    // Determine best display unit for this product
+    const unitInfo = bestUnitLabel(pRows);
+    const ppkgAll = pRows.map(r=>r.pricePerKg).filter(x=>x!=null);
+    let unitLabel=null, unitAvg=null, unitMin=null, unitMax=null;
+    if (unitInfo && ppkgAll.length) {
+      const converted = ppkgAll.map(v => v * unitInfo.mult);
+      unitLabel = unitInfo.label;
+      unitAvg = avg(converted);
+      unitMin = minSafe(converted);
+      unitMax = maxSafe(converted);
+    }
+
     // brands within this product
     const brandsInProduct = [...new Set(pRows.map(e=>e.brand||"(no brand)"))].sort();
     const brandData = brandsInProduct.map(b => {
       const bRows = pRows.filter(e=>(e.brand||"(no brand)")===b);
       const bPrices = bRows.map(r=>parseFloat(r.totalPrice)).filter(x=>!isNaN(x));
       const ppkg    = bRows.map(r=>r.pricePerKg).filter(x=>x!=null);
+
+      // Per-unit stats for this brand (using same unit as product)
+      let bUnitAvg=null, bUnitMin=null, bUnitMax=null;
+      if (unitInfo && ppkg.length) {
+        const bc = ppkg.map(v => v * unitInfo.mult);
+        bUnitAvg = avg(bc);
+        bUnitMin = minSafe(bc);
+        bUnitMax = maxSafe(bc);
+      }
 
       // stores for this brand
       const byStore = {};
@@ -488,13 +533,33 @@ function App() {
       });
       const storeAvgs = Object.entries(byStore).map(([s,ps])=>({store:s,avg:avg(ps)})).sort((a,b)=>a.avg-b.avg);
       const maxAvg = storeAvgs.length ? storeAvgs.at(-1).avg : 1;
-      return { brand:b, count:bRows.length, avgPrice:avg(bPrices), minPrice:Math.min(...bPrices)||null, maxPrice:Math.max(...bPrices)||null, avgPpkg:avg(ppkg), storeAvgs, maxAvg };
+
+      // Per-unit store averages
+      const byStoreUnit = {};
+      bRows.forEach(r => {
+        if (r.store && r.pricePerKg!=null && unitInfo) {
+          byStoreUnit[r.store]=byStoreUnit[r.store]||[];
+          byStoreUnit[r.store].push(r.pricePerKg * unitInfo.mult);
+        }
+      });
+      const storeUnitAvgs = Object.entries(byStoreUnit).map(([s,ps])=>({store:s,avg:avg(ps)})).sort((a,b)=>a.avg-b.avg);
+      const maxUnitAvg = storeUnitAvgs.length ? storeUnitAvgs.at(-1).avg : 1;
+
+      return { brand:b, count:bRows.length, avgPrice:avg(bPrices), minPrice:minSafe(bPrices), maxPrice:maxSafe(bPrices), avgPpkg:avg(ppkg), bUnitAvg, bUnitMin, bUnitMax, storeAvgs, maxAvg, storeUnitAvgs, maxUnitAvg };
     });
 
-    const ppkgAll = pRows.map(r=>r.pricePerKg).filter(x=>x!=null);
-    return { product:p, count:pRows.length, avgPrice:avg(prices), minPrice:prices.length?Math.min(...prices):null, maxPrice:prices.length?Math.max(...prices):null, avgPpkg:avg(ppkgAll), brandData };
+    return { product:p, count:pRows.length, avgPrice:avg(prices), minPrice:minSafe(prices), maxPrice:maxSafe(prices), avgPpkg:avg(ppkgAll), unitLabel, unitAvg, unitMin, unitMax, brandData };
     });
   }, [entries, analyticsTag]);
+
+  const filteredAnalytics = useMemo(() => {
+    if (!analyticsSearch.trim()) return productAnalytics;
+    const q = analyticsSearch.toLowerCase();
+    return productAnalytics.filter(p =>
+      p.product.toLowerCase().includes(q) ||
+      p.brandData.some(b => b.brand.toLowerCase().includes(q))
+    );
+  }, [productAnalytics, analyticsSearch]);
 
   const preview = deriveRow(form);
 
@@ -711,6 +776,14 @@ function App() {
           {entries.length===0
             ? <div className="empty"><div className="empty-icon">📊</div><div className="empty-text">No data yet.</div></div>
             : <>
+                <div className="search-wrap">
+                  <span className="search-icon">🔍</span>
+                  <input ref={analyticsSearchRef} value={analyticsSearch}
+                    onChange={e=>setAnalyticsSearch(e.target.value)}
+                    placeholder="Search product or brand…" />
+                  {analyticsSearch&&<button className="search-clear" onClick={()=>{setAnalyticsSearch("");analyticsSearchRef.current?.focus();}}>×</button>}
+                </div>
+
                 <div className="stat-grid">
                   {[
                     ["Entries",   entries.length,                           "#60a5fa"],
@@ -740,20 +813,28 @@ function App() {
                 )}
 
                 <div className="card">
-                  <div className="section-title">Price breakdown{analyticsTag?` — #${analyticsTag}`:""}</div>
-                  {productAnalytics.length===0
-                    ? <div style={{color:"#64748b",fontSize:13}}>No entries match this tag.</div>
-                    : productAnalytics.sort((a,b)=>a.product.localeCompare(b.product)).map(p=>(
+                  <div className="section-title">Price breakdown{analyticsTag?` — #${analyticsTag}`:""}{analyticsSearch?` — "${analyticsSearch}"`:""}</div>
+                  {filteredAnalytics.length===0
+                    ? <div style={{color:"#64748b",fontSize:13}}>No entries match{analyticsSearch?" your search":""}.</div>
+                    : filteredAnalytics.map(p=>(
                     <div key={p.product} className="product-row">
                       <div className="product-name">{p.product} <span style={{fontWeight:400,color:"#64748b",fontSize:12}}>({p.count} record{p.count!==1?"s":""})</span></div>
 
-                      {/* Product-level summary — only shown when there are multiple brands */}
-                      {p.brandData.length > 1 && (
-                        <div style={{display:"flex",gap:12,flexWrap:"wrap",margin:"6px 0 2px",paddingLeft:2}}>
-                          {[["All brands avg",p.avgPrice],["Min",p.minPrice],["Max",p.maxPrice],["Avg $/kg",p.avgPpkg]].map(([l,v])=>fmt$(v)?(
+                      {/* Product-level summary */}
+                      <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"6px 0 2px",paddingLeft:2}}>
+                        {[["Avg",p.avgPrice,"#e2e8f0"],["Min",p.minPrice,"#4ade80"],["Max",p.maxPrice,"#f87171"]].map(([l,v,c])=>fmt$(v)?(
+                          <div key={l} style={{fontSize:13}}>
+                            <span style={{color:"#64748b",fontSize:11}}>{l} </span>
+                            <strong style={{color:c}}>{fmt$(v)}</strong>
+                          </div>
+                        ):null)}
+                      </div>
+                      {p.unitLabel && (
+                        <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"2px 0 4px",paddingLeft:2}}>
+                          {[["Avg "+p.unitLabel,p.unitAvg,"#e2e8f0"],["Min "+p.unitLabel,p.unitMin,"#4ade80"],["Max "+p.unitLabel,p.unitMax,"#f87171"]].map(([l,v,c])=>v!=null?(
                             <div key={l} style={{fontSize:13}}>
                               <span style={{color:"#64748b",fontSize:11}}>{l} </span>
-                              <strong style={{color:l==="Min"?"#4ade80":l==="Max"?"#f87171":"#e2e8f0"}}>{fmt$(v)}</strong>
+                              <strong style={{color:c}}>{fmt$3(v)}</strong>
                             </div>
                           ):null)}
                         </div>
@@ -763,14 +844,27 @@ function App() {
                         <div key={b.brand} className="brand-block">
                           <div className="brand-title">
                             {b.brand}
-                            {[["avg",b.avgPrice],["min",b.minPrice],["$/kg",b.avgPpkg]].map(([l,v])=>fmt$(v)?(
-                              <span key={l} style={{fontWeight:400,color:"#94a3b8",marginLeft:8,fontSize:11}}>{l} <strong style={{color:"#e2e8f0"}}>{fmt$(v)}</strong></span>
+                            <span style={{fontWeight:400,color:"#64748b",marginLeft:6,fontSize:11}}>({b.count})</span>
+                          </div>
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap",margin:"4px 0 6px"}}>
+                            {[["avg",b.avgPrice],["min",b.minPrice],["max",b.maxPrice]].map(([l,v])=>fmt$(v)?(
+                              <span key={l} style={{fontSize:11,color:"#94a3b8"}}>{l} <strong style={{color:l==="min"?"#4ade80":l==="max"?"#f87171":"#e2e8f0"}}>{fmt$(v)}</strong></span>
                             ):null)}
+                            {p.unitLabel && b.bUnitAvg!=null && (
+                              <>
+                                <span style={{fontSize:11,color:"#1e3a5f"}}>│</span>
+                                {[["avg",b.bUnitAvg],["min",b.bUnitMin],["max",b.bUnitMax]].map(([l,v])=>v!=null?(
+                                  <span key={l+"u"} style={{fontSize:11,color:"#94a3b8"}}>{l} <strong style={{color:l==="min"?"#4ade80":l==="max"?"#f87171":"#7dd3fc"}}>{fmt$3(v)}</strong><span style={{color:"#475569",fontSize:10}}>/{p.unitLabel.replace("$/","")}</span></span>
+                                ):null)}
+                              </>
+                            )}
                           </div>
 
                           {b.storeAvgs.length > 0 && (
                             <div className="store-bars">
-                              {b.storeAvgs.map((sv,i)=>(
+                              {b.storeAvgs.map((sv,i)=>{
+                                const unitAvg = b.storeUnitAvgs?.find(su=>su.store===sv.store);
+                                return (
                                 <div key={sv.store} className="store-bar">
                                   <div className="store-name" style={{color:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#94a3b8"}}>
                                     {i===0&&b.storeAvgs.length>1 ? "✓ " : ""}{sv.store}
@@ -781,9 +875,12 @@ function App() {
                                       background: i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#3b82f6"
                                     }}/>
                                   </div>
-                                  <div className="store-price" style={{color:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#e2e8f0"}}>{fmt$(sv.avg)}</div>
+                                  <div className="store-price" style={{color:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#e2e8f0"}}>
+                                    {fmt$(sv.avg)}
+                                    {unitAvg && p.unitLabel && <div style={{fontSize:10,color:"#64748b",fontWeight:400}}>{fmt$3(unitAvg.avg)}/{p.unitLabel.replace("$/","")}</div>}
+                                  </div>
                                 </div>
-                              ))}
+                              );})}
                             </div>
                           )}
                         </div>
