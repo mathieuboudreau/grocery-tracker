@@ -436,15 +436,17 @@ function App() {
     pullCloud(s);
   };
 
-  const allProducts = useMemo(() => [...new Set(entries.map(e=>e.product).filter(Boolean))].sort(), [entries]);
-  const allBrands   = useMemo(() => [...new Set(entries.map(e=>e.brand).filter(Boolean))].sort(),   [entries]);
-  const allStores   = useMemo(() => [...new Set(entries.map(e=>e.store).filter(Boolean))].sort(),   [entries]);
-  const allCats     = useMemo(() => [...new Set(entries.map(e=>e.category).filter(Boolean))].sort(),[entries]);
+  const allProducts = useMemo(() => [...new Set(entries.filter(e=>!e.deletedAt).map(e=>e.product).filter(Boolean))].sort(), [entries]);
+  const allBrands   = useMemo(() => [...new Set(entries.filter(e=>!e.deletedAt).map(e=>e.brand).filter(Boolean))].sort(),   [entries]);
+  const allStores   = useMemo(() => [...new Set(entries.filter(e=>!e.deletedAt).map(e=>e.store).filter(Boolean))].sort(),   [entries]);
+  const allCats     = useMemo(() => [...new Set(entries.filter(e=>!e.deletedAt).map(e=>e.category).filter(Boolean))].sort(),[entries]);
   const allTags     = useMemo(()=>{
     const counts={};
-    entries.forEach(e=>(e.tags||[]).forEach(t=>{counts[t]=(counts[t]||0)+1;}));
+    entries.filter(e=>!e.deletedAt).forEach(e=>(e.tags||[]).forEach(t=>{counts[t]=(counts[t]||0)+1;}));
     return Object.entries(counts).map(([tag,count])=>({tag,count})).sort((a,b)=>b.count-a.count);
   },[entries]);
+  const activeCount = useMemo(() => entries.filter(e=>!e.deletedAt).length, [entries]);
+  const deletedCount = useMemo(() => entries.filter(e=>!!e.deletedAt).length, [entries]);
 
   const sf = k => e => setForm(f=>({...f,[k]:e.target.value}));
 
@@ -459,7 +461,8 @@ function App() {
 
   const startEdit = e => { setForm({...e, tags:e.tags||[]}); setEditId(e.id); setTab("add"); };
   const cancel    = () => { setForm({...EMPTY,date:TODAY()}); setEditId(null); setTab("db"); };
-  const del       = id => { if (window.confirm("Delete this entry?")) setEntries(p=>p.filter(e=>e.id!==id)); };
+  const del       = id => { if (window.confirm("Delete this entry?")) setEntries(p=>p.map(e=>e.id===id?{...e, deletedAt:new Date().toISOString(), updatedAt:new Date().toISOString()}:e)); };
+  const purgeDeleted = () => { if (window.confirm(`Permanently remove ${deletedCount} deleted entries? Make sure both devices are synced first.`)) { setEntries(p=>p.filter(e=>!e.deletedAt)); showToast(`🗑️ Purged ${deletedCount} deleted entries`); } };
   const switchTab = id => { if(id!=="add"){setEditId(null);setForm({...EMPTY,date:TODAY()});} setTab(id); };
   const filterByTag = tag => { setTagFilter(tag); setSearchQ(""); };
 
@@ -605,6 +608,7 @@ function App() {
     const q=searchQ.toLowerCase();
     return entries
       .filter(e => {
+        if (e.deletedAt) return false;
         if (storeFilter!=="all" && e.store!==storeFilter) return false;
         if (tagFilter && !(e.tags||[]).includes(tagFilter)) return false;
         if (!q) return true;
@@ -623,7 +627,8 @@ function App() {
 
   /* ── Analytics: group by product → brand → store ── */
   const productAnalytics = useMemo(() => {
-    const base = analyticsTag ? entries.filter(e=>(e.tags||[]).includes(analyticsTag)) : entries;
+    const active = entries.filter(e=>!e.deletedAt);
+    const base = analyticsTag ? active.filter(e=>(e.tags||[]).includes(analyticsTag)) : active;
     const products=[...new Set(base.map(e=>e.product).filter(Boolean))].sort();
     return products.map(p => {
     const pRows = base.filter(e=>e.product===p);
@@ -724,7 +729,7 @@ function App() {
           <div className="logo">🛒 Grocery Tracker</div>
           <span className={`sync-pill ${syncStatus}`}>{syncLabel}</span>
         </div>
-        <div className="stats">{entries.length} entries · {allProducts.length} products · {allStores.length} stores</div>
+        <div className="stats">{activeCount} entries · {allProducts.length} products · {allStores.length} stores</div>
         <nav className="nav">
           {[["db","🗂️","Database"],["add","➕","Add"],["analytics","📊","Analytics"],["sync","☁️","Sync"]].map(([id,icon,lbl])=>(
             <button key={id} className={`nav-btn${tab===id?" active":""}`} onClick={()=>switchTab(id)}>
@@ -769,7 +774,7 @@ function App() {
           </div>
 
           {filtered.length===0
-            ? <div className="empty"><div className="empty-icon">{entries.length===0?"🛒":"🔍"}</div><div className="empty-text">{entries.length===0?"No entries yet.\nTap Add to get started.":"No results found."}</div></div>
+            ? <div className="empty"><div className="empty-icon">{activeCount===0?"🛒":"🔍"}</div><div className="empty-text">{activeCount===0?"No entries yet.\nTap Add to get started.":"No results found."}</div></div>
             : filtered.map(e=>(
                 <div className="entry-card" key={e.id}>
                   <div className="entry-top">
@@ -980,7 +985,7 @@ function App() {
       {/* ── ANALYTICS ── */}
       {tab==="analytics" && (
         <div className="page">
-          {entries.length===0
+          {activeCount===0
             ? <div className="empty"><div className="empty-icon">📊</div><div className="empty-text">No data yet.</div></div>
             : <>
                 <div className="search-wrap">
@@ -993,7 +998,7 @@ function App() {
 
                 <div className="stat-grid">
                   {[
-                    ["Entries",   entries.length,                           "#2563eb"],
+                    ["Entries",   activeCount,                              "#2563eb"],
                     ["Products",  allProducts.length,                       "#16a34a"],
                     ["Brands",    allBrands.length,                         "#9333ea"],
                     ["Stores",    allStores.length,                         "#ea580c"],
@@ -1118,10 +1123,19 @@ function App() {
             <div style={{background:"#0d1117",borderRadius:10,padding:"12px 14px",marginBottom:14,fontSize:13,color:"#64748b",lineHeight:1.8}}>
               <div>Status: <strong style={{color:syncStatus==="synced"?"#4ade80":syncStatus==="error"?"#fca5a5":"#93c5fd"}}>{syncStatus}</strong></div>
               {lastSynced&&<div>Last synced: <strong style={{color:"#e2e8f0"}}>{lastSynced.toLocaleTimeString()}</strong></div>}
-              <div>Entries in database: <strong style={{color:"#e2e8f0"}}>{entries.length}</strong></div>
+              <div>Entries in database: <strong style={{color:"#e2e8f0"}}>{activeCount}</strong>{deletedCount>0&&<span style={{color:"#fca5a5"}}> (+{deletedCount} deleted)</span>}</div>
             </div>
             <button className="btn btn-primary" onClick={()=>pullCloud(secret)}>🔄 Sync now</button>
           </div>
+          {deletedCount>0&&(
+            <div className="card">
+              <div className="section-title">🗑️ Deleted entries</div>
+              <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>
+                {deletedCount} deleted {deletedCount===1?"entry is":"entries are"} kept as tombstones so sync can propagate deletions across devices. Once both devices are synced, you can permanently purge them to free space.
+              </p>
+              <button className="btn btn-danger" onClick={purgeDeleted}>🗑️ Purge {deletedCount} deleted {deletedCount===1?"entry":"entries"}</button>
+            </div>
+          )}
           <div className="card">
             <div className="section-title">Change secret key</div>
             <p style={{fontSize:14,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>Update the key saved on this device.</p>
