@@ -213,7 +213,7 @@ function deriveRow(row) {
 }
 
 const fmt$   = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : null;
-const fmt$3  = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(3)}` : null;
+const fmt$3  = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : null;
 const uid    = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
 const TODAY  = () => {
   const d = new Date();
