@@ -432,7 +432,11 @@ function App() {
 
   const save = () => {
     if (!form.product.trim()) return;
-    const row = deriveRow({ ...form, id: editId||uid(), tags: form.tags||[], updatedAt: new Date().toISOString() });
+    const saveForm = { ...form, id: editId||uid(), tags: form.tags||[], updatedAt: new Date().toISOString() };
+    // Prefer S3 path for persistent storage (GET converts to presigned URL)
+    if (saveForm.imageS3Path) { saveForm.imageUrl = saveForm.imageS3Path; }
+    delete saveForm.imageS3Path;
+    const row = deriveRow(saveForm);
     setEntries(prev => editId ? prev.map(e=>e.id===editId?row:e) : [...prev, row]);
     setForm({ ...EMPTY, date:TODAY() }); setEditId(null); setTab("db");
   };
@@ -545,7 +549,8 @@ function App() {
           onSale: extracted.sale ? "Y" : f.onSale,
           notes: extracted.notes || f.notes,
           date: f.date || TODAY(),
-          imageUrl: extracted.imageUrl || null  // S3 URL from Lambda
+          imageUrl: thumbnailDataUrl || null,    // Local thumbnail for immediate display
+          imageS3Path: extracted.imageUrl || null // S3 path for cloud storage
         }));
         showToast("✅ Product scanned!");
       } else {
@@ -752,7 +757,7 @@ function App() {
             : filtered.map(e=>(
                 <div className="entry-card" key={e.id}>
                   <div className="entry-top">
-                    {e.imageUrl && (
+                    {e.imageUrl && !e.imageUrl.startsWith('s3://') && (
                       <img 
                         src={e.imageUrl} 
                         alt={e.product}
@@ -823,7 +828,7 @@ function App() {
                 </button>
                 
                 {/* Image preview */}
-                {form.imageUrl && (
+                {form.imageUrl && !form.imageUrl.startsWith('s3://') && (
                   <div style={{
                     marginBottom: 16,
                     display: 'flex',
@@ -851,7 +856,7 @@ function App() {
                     <button 
                       className="btn btn-sm"
                       style={{background: '#fee2e2', color: '#dc2626'}}
-                      onClick={() => setForm(f => ({...f, imageUrl: null}))}
+                      onClick={() => setForm(f => ({...f, imageUrl: null, imageS3Path: null}))}
                     >
                       Remove
                     </button>
