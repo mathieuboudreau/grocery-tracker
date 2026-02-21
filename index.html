@@ -215,7 +215,13 @@ function deriveRow(row) {
 const fmt$   = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : null;
 const fmt$3  = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(3)}` : null;
 const uid    = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
-const TODAY  = () => new Date().toISOString().slice(0,10);
+const TODAY  = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 const avg    = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
 const minSafe = arr => arr.length ? Math.min(...arr) : null;
 const maxSafe = arr => arr.length ? Math.max(...arr) : null;
