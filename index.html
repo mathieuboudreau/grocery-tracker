@@ -29,7 +29,7 @@
 
   /* Sync status pill */
   .sync-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; cursor: default; }
-  .sync-pill.synced  { background: #dcfce7; color: #15803d; }
+  .sync-pill.synced  { background: #dcfce7; color: #16a34a; }
   .sync-pill.syncing { background: #dbeafe; color: #1d4ed8; }
   .sync-pill.error   { background: #fee2e2; color: #dc2626; }
   .sync-pill.idle    { background: #f1f5f9; color: #64748b; }
@@ -82,13 +82,13 @@
   .btn-primary   { background: #2563eb; color: #fff; }
   .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
   .btn-danger    { background: #fee2e2; color: #dc2626; }
-  .btn-success   { background: #dcfce7; color: #15803d; }
+  .btn-success   { background: #dcfce7; color: #16a34a; }
   .btn-warning   { background: #fef3c7; color: #d97706; }
   .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; margin-bottom: 0; border-radius: 8px; }
 
   .calc-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 12px; }
-  .calc-lbl { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; }
-  .calc-val { font-size: 16px; font-weight: 800; color: #15803d; }
+  .calc-lbl { font-size: 10px; color: #475569; font-weight: 700; text-transform: uppercase; }
+  .calc-val { font-size: 16px; font-weight: 800; color: #16a34a; }
 
   .entry-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-bottom: 10px; }
   .entry-top  { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
@@ -102,7 +102,7 @@
   .price-pill .plbl { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; }
   .price-pill .pval { font-weight: 700; color: #0f172a; }
   .price-pill.main .pval { color: #2563eb; font-size: 15px; }
-  .sale-badge { display: inline-block; background: #dcfce7; color: #15803d; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .sale-badge { display: inline-block; background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
 
   /* Search bar */
   .search-wrap { position: relative; margin-bottom: 12px; }
@@ -879,10 +879,10 @@ function App() {
 
                 <div className="stat-grid">
                   {[
-                    ["Entries",   entries.length,                           "#60a5fa"],
-                    ["Products",  allProducts.length,                       "#4ade80"],
-                    ["Brands",    allBrands.length,                         "#a78bfa"],
-                    ["Stores",    allStores.length,                         "#fbbf24"],
+                    ["Entries",   entries.length,                           "#2563eb"],
+                    ["Products",  allProducts.length,                       "#16a34a"],
+                    ["Brands",    allBrands.length,                         "#9333ea"],
+                    ["Stores",    allStores.length,                         "#ea580c"],
                   ].map(([lbl,val,color])=>(
                     <div key={lbl} className="stat-card" style={{borderTop:`3px solid ${color}`}}>
                       <div className="stat-val" style={{color}}>{val}</div>
@@ -915,18 +915,18 @@ function App() {
 
                       {/* Product-level summary */}
                       <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"6px 0 2px",paddingLeft:2}}>
-                        {[["Avg",p.avgPrice,"#e2e8f0"],["Min",p.minPrice,"#4ade80"],["Max",p.maxPrice,"#f87171"]].map(([l,v,c])=>fmt$(v)?(
+                        {[["Avg",p.avgPrice,"#0f172a"],["Min",p.minPrice,"#16a34a"],["Max",p.maxPrice,"#dc2626"]].map(([l,v,c])=>fmt$(v)?(
                           <div key={l} style={{fontSize:13}}>
-                            <span style={{color:"#64748b",fontSize:11}}>{l} </span>
+                            <span style={{color:"#475569",fontSize:11}}>{l} </span>
                             <strong style={{color:c}}>{fmt$(v)}</strong>
                           </div>
                         ):null)}
                       </div>
                       {p.unitLabel && (
                         <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"2px 0 4px",paddingLeft:2}}>
-                          {[["Avg "+p.unitLabel,p.unitAvg,"#e2e8f0"],["Min "+p.unitLabel,p.unitMin,"#4ade80"],["Max "+p.unitLabel,p.unitMax,"#f87171"]].map(([l,v,c])=>v!=null?(
+                          {[["Avg "+p.unitLabel,p.unitAvg,"#0f172a"],["Min "+p.unitLabel,p.unitMin,"#16a34a"],["Max "+p.unitLabel,p.unitMax,"#dc2626"]].map(([l,v,c])=>v!=null?(
                             <div key={l} style={{fontSize:13}}>
-                              <span style={{color:"#64748b",fontSize:11}}>{l} </span>
+                              <span style={{color:"#475569",fontSize:11}}>{l} </span>
                               <strong style={{color:c}}>{fmt$3(v)}</strong>
                             </div>
                           ):null)}
@@ -941,13 +941,13 @@ function App() {
                           </div>
                           <div style={{display:"flex",gap:8,flexWrap:"wrap",margin:"4px 0 6px"}}>
                             {[["avg",b.avgPrice],["min",b.minPrice],["max",b.maxPrice]].map(([l,v])=>fmt$(v)?(
-                              <span key={l} style={{fontSize:11,color:"#94a3b8"}}>{l} <strong style={{color:l==="min"?"#4ade80":l==="max"?"#f87171":"#e2e8f0"}}>{fmt$(v)}</strong></span>
+                              <span key={l} style={{fontSize:11,color:"#64748b"}}>{l} <strong style={{color:l==="min"?"#16a34a":l==="max"?"#dc2626":"#0f172a"}}>{fmt$(v)}</strong></span>
                             ):null)}
                             {p.unitLabel && b.bUnitAvg!=null && (
                               <>
-                                <span style={{fontSize:11,color:"#1e3a5f"}}>│</span>
+                                <span style={{fontSize:11,color:"#cbd5e1"}}>│</span>
                                 {[["avg",b.bUnitAvg],["min",b.bUnitMin],["max",b.bUnitMax]].map(([l,v])=>v!=null?(
-                                  <span key={l+"u"} style={{fontSize:11,color:"#94a3b8"}}>{l} <strong style={{color:l==="min"?"#4ade80":l==="max"?"#f87171":"#7dd3fc"}}>{fmt$3(v)}</strong><span style={{color:"#475569",fontSize:10}}>/{p.unitLabel.replace("$/","")}</span></span>
+                                  <span key={l+"u"} style={{fontSize:11,color:"#64748b"}}>{l} <strong style={{color:l==="min"?"#16a34a":l==="max"?"#dc2626":"#3b82f6"}}>{fmt$3(v)}</strong><span style={{color:"#64748b",fontSize:10}}>/{p.unitLabel.replace("$/","")}</span></span>
                                 ):null)}
                               </>
                             )}
@@ -959,16 +959,16 @@ function App() {
                                 const unitAvg = b.storeUnitAvgs?.find(su=>su.store===sv.store);
                                 return (
                                 <div key={sv.store} className="store-bar">
-                                  <div className="store-name" style={{color:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#94a3b8"}}>
+                                  <div className="store-name" style={{color:i===0?"#15803d":i===b.storeAvgs.length-1&&i>0?"#b91c1c":"#475569"}}>
                                     {i===0&&b.storeAvgs.length>1 ? "✓ " : ""}{sv.store}
                                   </div>
                                   <div className="bar-track">
                                     <div className="bar-fill" style={{
                                       width:`${(sv.avg/b.maxAvg*100).toFixed(1)}%`,
-                                      background: i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#3b82f6"
+                                      background: i===0?"#16a34a":i===b.storeAvgs.length-1&&i>0?"#dc2626":"#3b82f6"
                                     }}/>
                                   </div>
-                                  <div className="store-price" style={{color:i===0?"#4ade80":i===b.storeAvgs.length-1&&i>0?"#f87171":"#e2e8f0"}}>
+                                  <div className="store-price" style={{color:i===0?"#15803d":i===b.storeAvgs.length-1&&i>0?"#b91c1c":"#0f172a"}}>
                                     {fmt$(sv.avg)}
                                     {unitAvg && p.unitLabel && <div style={{fontSize:10,color:"#64748b",fontWeight:400}}>{fmt$3(unitAvg.avg)}/{p.unitLabel.replace("$/","")}</div>}
                                   </div>
