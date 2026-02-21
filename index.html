@@ -459,10 +459,12 @@ function App() {
     if (form.imageS3Path) row.imageS3Path = form.imageS3Path;
     if (form.store) lastStore.current = form.store;
     setEntries(prev => editId ? prev.map(e=>e.id===editId?row:e) : [...prev, row]);
+    showToast(editId ? "✅ Entry updated!" : `✅ ${form.product} added!`);
     setForm({ ...EMPTY, date:TODAY(), store:lastStore.current }); setEditId(null); setTab("db");
   };
 
   const startEdit = e => { setForm({...e, tags:e.tags||[]}); setEditId(e.id); setTab("add"); };
+  const duplicate = e => { setForm({...e, tags:e.tags||[], id:undefined, date:TODAY(), totalPrice:"", regPrice:"", onSale:"", notes:"", imageUrl:e.imageUrl||null, imageS3Path:e.imageS3Path||null}); setEditId(null); setTab("add"); };
   const cancel    = () => { setForm({...EMPTY,date:TODAY(), store:lastStore.current}); setEditId(null); setTab("db"); };
   const del       = id => { if (window.confirm("Delete this entry?")) setEntries(p=>p.map(e=>e.id===id?{...e, deletedAt:new Date().toISOString(), updatedAt:new Date().toISOString()}:e)); };
   const purgeDeleted = () => { if (window.confirm(`Permanently remove ${deletedCount} deleted entries? Make sure both devices are synced first.`)) { setEntries(p=>p.filter(e=>!e.deletedAt)); showToast(`🗑️ Purged ${deletedCount} deleted entries`); } };
@@ -842,7 +844,7 @@ function App() {
     <div className="setup-screen">
       <div className="setup-icon">🔑</div>
       <div className="setup-title">Enter your sync key</div>
-      <div className="setup-desc">This is the secret you set in the Lambda function. It stays on your device only — it's never stored anywhere except your browser.</div>
+      <div className="setup-desc">Ask your family member for the sync key to connect your devices. It stays on your phone only.</div>
       <input className="setup-input" type="password" placeholder="Your secret key…"
         value={secretInput} onChange={e=>setSecretInput(e.target.value)}
         onKeyDown={e=>e.key==="Enter"&&saveSecret()} autoFocus />
@@ -932,6 +934,7 @@ function App() {
                       </div>
                     </div>
                     <div className="entry-actions">
+                      <button className="btn btn-secondary btn-sm" title="Buy again" onClick={()=>duplicate(e)}>↻</button>
                       <button className="btn btn-secondary btn-sm" onClick={()=>startEdit(e)}>✏️</button>
                       <button className="btn btn-danger btn-sm"    onClick={()=>del(e.id)}>🗑️</button>
                     </div>
@@ -1016,21 +1019,6 @@ function App() {
               </>
             )}
 
-            <div className="field-row cols-2">
-              <div>
-                <label className="lbl">Date</label>
-                <input type="date" value={form.date||""} onChange={sf("date")} />
-              </div>
-              <div>
-                <label className="lbl">On Sale?</label>
-                <select value={form.onSale||""} onChange={sf("onSale")}>
-                  <option value="">—</option>
-                  <option value="Y">✅ Yes</option>
-                  <option value="N">No</option>
-                </select>
-              </div>
-            </div>
-
             <div className="field">
               <label className="lbl">Product Name <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— generic name, e.g. "Butter"</span></label>
               <input value={form.product||""} onChange={sf("product")} placeholder="e.g. Butter, Milk, Pasta" list="prod-list" />
@@ -1043,11 +1031,6 @@ function App() {
               <datalist id="brand-list">{allBrands.map(b=><option key={b} value={b}/>)}</datalist>
             </div>
 
-            <div className="field">
-              <label className="lbl">Tags <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— variants, e.g. "black-forest, sliced"</span></label>
-              <TagInput tags={form.tags||[]} onChange={tags=>setForm(f=>({...f,tags}))} allTags={allTags} />
-            </div>
-
             <div className="field-row cols-2">
               <div>
                 <label className="lbl">Store</label>
@@ -1058,6 +1041,17 @@ function App() {
                 <label className="lbl">Category</label>
                 <input value={form.category||""} onChange={sf("category")} placeholder="e.g. Dairy" list="cat-list" />
                 <datalist id="cat-list">{allCats.map(c=><option key={c} value={c}/>)}</datalist>
+              </div>
+            </div>
+
+            <div className="field-row cols-2">
+              <div>
+                <label className="lbl">Total Price ($)</label>
+                <input type="number" step="0.01" value={form.totalPrice||""} onChange={sf("totalPrice")} placeholder="4.99" />
+              </div>
+              <div>
+                <label className="lbl">Regular Price ($)</label>
+                <input type="number" step="0.01" value={form.regPrice||""} onChange={sf("regPrice")} placeholder="6.99" />
               </div>
             </div>
 
@@ -1078,14 +1072,23 @@ function App() {
               </div>
             </div>
 
+            <div className="field">
+              <label className="lbl">Tags <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— variants, e.g. "black-forest, sliced"</span></label>
+              <TagInput tags={form.tags||[]} onChange={tags=>setForm(f=>({...f,tags}))} allTags={allTags} />
+            </div>
+
             <div className="field-row cols-2">
               <div>
-                <label className="lbl">Total Price ($)</label>
-                <input type="number" step="0.01" value={form.totalPrice||""} onChange={sf("totalPrice")} placeholder="4.99" />
+                <label className="lbl">Date</label>
+                <input type="date" value={form.date||""} onChange={sf("date")} />
               </div>
               <div>
-                <label className="lbl">Regular Price ($)</label>
-                <input type="number" step="0.01" value={form.regPrice||""} onChange={sf("regPrice")} placeholder="6.99" />
+                <label className="lbl">On Sale?</label>
+                <select value={form.onSale||""} onChange={sf("onSale")}>
+                  <option value="">—</option>
+                  <option value="Y">✅ Yes</option>
+                  <option value="N">No</option>
+                </select>
               </div>
             </div>
 
