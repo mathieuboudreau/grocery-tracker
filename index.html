@@ -357,7 +357,18 @@ function App() {
   const isFirstRender = useRef(true);
 
   useEffect(() => {
-    try { localStorage.setItem("gt_v3", JSON.stringify(entries)); } catch {}
+    try {
+      // Strip data URLs from localStorage (they're large); swap in S3 paths
+      const toStore = entries.map(e => {
+        if (e.imageS3Path) {
+          const copy = {...e, imageUrl: e.imageS3Path};
+          delete copy.imageS3Path;
+          return copy;
+        }
+        return e;
+      });
+      localStorage.setItem("gt_v3", JSON.stringify(toStore));
+    } catch {}
   }, [entries]);
 
   const showToast = msg => {
@@ -389,10 +400,17 @@ function App() {
     const key = sk||secret; if (!key) return;
     setSyncStatus("syncing");
     try {
+      // For cloud storage, swap in S3 paths so GET handler can generate presigned URLs
+      const cloudEntries = entriesToPush.map(e => {
+        const copy = {...e};
+        if (copy.imageS3Path) { copy.imageUrl = copy.imageS3Path; }
+        delete copy.imageS3Path;
+        return copy;
+      });
       const res = await fetch(LAMBDA_URL, {
         method:"PUT",
         headers:{"Content-Type":"application/json","x-secret":key},
-        body: JSON.stringify({entries: entriesToPush})
+        body: JSON.stringify({entries: cloudEntries})
       });
       if (!res.ok) throw new Error();
       setLastSynced(new Date()); setSyncStatus("synced");
@@ -432,11 +450,9 @@ function App() {
 
   const save = () => {
     if (!form.product.trim()) return;
-    const saveForm = { ...form, id: editId||uid(), tags: form.tags||[], updatedAt: new Date().toISOString() };
-    // Prefer S3 path for persistent storage (GET converts to presigned URL)
-    if (saveForm.imageS3Path) { saveForm.imageUrl = saveForm.imageS3Path; }
-    delete saveForm.imageS3Path;
-    const row = deriveRow(saveForm);
+    const row = deriveRow({ ...form, id: editId||uid(), tags: form.tags||[], updatedAt: new Date().toISOString() });
+    // Carry imageS3Path through so pushCloud can use it
+    if (form.imageS3Path) row.imageS3Path = form.imageS3Path;
     setEntries(prev => editId ? prev.map(e=>e.id===editId?row:e) : [...prev, row]);
     setForm({ ...EMPTY, date:TODAY() }); setEditId(null); setTab("db");
   };
