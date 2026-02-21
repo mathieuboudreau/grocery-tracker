@@ -471,6 +471,36 @@ function App() {
   };
 
   /* ── Camera Scan Feature ── */
+  const createThumbnail = async (imageFile) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Center crop to square
+          const size = Math.min(img.width, img.height);
+          const x = (img.width - size) / 2;
+          const y = (img.height - size) / 2;
+          
+          // Resize to 200x200
+          canvas.width = 200;
+          canvas.height = 200;
+          ctx.drawImage(img, x, y, size, size, 0, 0, 200, 200);
+          
+          // Return as data URL
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(imageFile);
+    });
+  };
+
   const handleImageCapture = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -479,7 +509,10 @@ function App() {
     showToast("📸 Processing image...");
     
     try {
-      // Convert image to base64
+      // Create thumbnail FIRST (for local storage)
+      const thumbnail = await createThumbnail(file);
+      
+      // Convert image to base64 for Claude
       const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(',')[1]);
@@ -494,7 +527,7 @@ function App() {
       const extracted = await scanProductImage(base64, mediaType);
       
       if (extracted) {
-        // Auto-fill form with extracted data
+        // Auto-fill form with extracted data + thumbnail
         setForm(f => ({
           ...f,
           product: extracted.product || f.product,
@@ -504,7 +537,8 @@ function App() {
           unit: extracted.unit || f.unit,
           onSale: extracted.sale ? "Y" : f.onSale,
           notes: extracted.notes || f.notes,
-          date: f.date || TODAY()
+          date: f.date || TODAY(),
+          imageUrl: thumbnail  // Store thumbnail as data URL
         }));
         showToast("✅ Product scanned!");
       } else {
@@ -710,7 +744,22 @@ function App() {
             : filtered.map(e=>(
                 <div className="entry-card" key={e.id}>
                   <div className="entry-top">
-                    <div style={{minWidth:0}}>
+                    {e.imageUrl && (
+                      <img 
+                        src={e.imageUrl} 
+                        alt={e.product}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: 8,
+                          objectFit: 'cover',
+                          marginRight: 12,
+                          flexShrink: 0,
+                          border: '1px solid #e2e8f0'
+                        }}
+                      />
+                    )}
+                    <div style={{minWidth:0,flex:1}}>
                       <div className="entry-product">{e.product}</div>
                       {e.brand && <div className="entry-brand">{e.brand}</div>}
                       <div className="entry-meta">
@@ -764,6 +813,42 @@ function App() {
                 >
                   {scanning ? "🔄 Scanning..." : "📸 Scan Product"}
                 </button>
+                
+                {/* Image preview */}
+                {form.imageUrl && (
+                  <div style={{
+                    marginBottom: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: 12,
+                    background: '#f8fafc',
+                    borderRadius: 10,
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <img 
+                      src={form.imageUrl} 
+                      alt="Product preview"
+                      style={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: 8,
+                        objectFit: 'cover',
+                        border: '1px solid #e2e8f0'
+                      }}
+                    />
+                    <div style={{flex: 1, fontSize: 13, color: '#64748b'}}>
+                      ✓ Image captured
+                    </div>
+                    <button 
+                      className="btn btn-sm"
+                      style={{background: '#fee2e2', color: '#dc2626'}}
+                      onClick={() => setForm(f => ({...f, imageUrl: null}))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </>
             )}
 
@@ -989,6 +1074,13 @@ function App() {
       {/* ── SYNC TAB ── */}
       {tab==="sync" && (
         <div className="page">
+          <div className="card" style={{background:"#eff6ff",borderColor:"#bfdbfe"}}>
+            <div className="section-title" style={{color:"#1e40af"}}>📸 Image Storage (Demo)</div>
+            <p style={{fontSize:14,color:"#1e40af",marginBottom:0,lineHeight:1.6}}>
+              Product images are stored locally in your browser (base64 in localStorage). They sync between devices but increase storage usage. For production, images should be uploaded to S3 instead.
+            </p>
+          </div>
+          
           <div className="card">
             <div className="section-title">Cloud sync</div>
             <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>
