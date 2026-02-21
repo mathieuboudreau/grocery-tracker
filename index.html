@@ -704,6 +704,82 @@ function App() {
 
   const preview = deriveRow(form);
 
+  /* ── Price Comparison ── */
+  const comparison = useMemo(() => {
+    const product = (form.product||"").trim().toLowerCase();
+    const price = parseFloat(form.totalPrice);
+    if (!product || isNaN(price)) return null;
+
+    const matches = entries.filter(e => !e.deletedAt && (e.product||"").toLowerCase() === product);
+    if (!matches.length) return { isNew: true };
+
+    const prices = matches.map(e => parseFloat(e.totalPrice)).filter(x => !isNaN(x));
+    if (!prices.length) return { isNew: true };
+
+    const avgP = avg(prices), minP = minSafe(prices), maxP = maxSafe(prices);
+    const pctFromAvg = avgP ? Math.round((price - avgP) / avgP * 100) : null;
+
+    // Verdict
+    let verdict = "average", verdictIcon = "🟡", verdictColor = "#d97706";
+    if (pctFromAvg !== null) {
+      if (pctFromAvg <= -10) { verdict = "great deal"; verdictIcon = "🟢"; verdictColor = "#16a34a"; }
+      else if (pctFromAvg <= 5) { verdict = "average"; verdictIcon = "🟡"; verdictColor = "#d97706"; }
+      else { verdict = "pricey"; verdictIcon = "🔴"; verdictColor = "#dc2626"; }
+    }
+
+    // Best price ever
+    const cheapest = matches.filter(e => parseFloat(e.totalPrice) === minP)[0];
+
+    // Same store history
+    const store = (form.store||"").trim().toLowerCase();
+    let storeHistory = null;
+    if (store) {
+      const storeMatches = matches.filter(e => (e.store||"").toLowerCase() === store)
+        .sort((a,b) => (b.date||"").localeCompare(a.date||""));
+      if (storeMatches.length) {
+        const storePrices = storeMatches.map(e => parseFloat(e.totalPrice)).filter(x => !isNaN(x));
+        const lastEntry = storeMatches[0];
+        const lastPrice = parseFloat(lastEntry.totalPrice);
+        const trend = !isNaN(lastPrice) ? (price > lastPrice ? "up" : price < lastPrice ? "down" : "same") : null;
+        storeHistory = {
+          count: storeMatches.length,
+          lastPrice: isNaN(lastPrice) ? null : lastPrice,
+          lastDate: lastEntry.date,
+          avgPrice: avg(storePrices),
+          trend
+        };
+      }
+    }
+
+    // Same brand history
+    const brand = (form.brand||"").trim().toLowerCase();
+    let brandHistory = null;
+    if (brand) {
+      const brandMatches = matches.filter(e => (e.brand||"").toLowerCase() === brand);
+      if (brandMatches.length) {
+        const brandPrices = brandMatches.map(e => parseFloat(e.totalPrice)).filter(x => !isNaN(x));
+        if (brandPrices.length) {
+          brandHistory = { count: brandMatches.length, avgPrice: avg(brandPrices), minPrice: minSafe(brandPrices) };
+        }
+      }
+    }
+
+    // Unit price comparison (if current entry has weight)
+    let unitComparison = null;
+    const ppkg = preview.pricePerKg;
+    if (ppkg != null) {
+      const withUnit = matches.filter(e => e.pricePerKg != null);
+      if (withUnit.length) {
+        const unitPrices = withUnit.map(e => e.pricePerKg);
+        const unitAvg = avg(unitPrices), unitMin = minSafe(unitPrices);
+        const unitPct = unitAvg ? Math.round((ppkg - unitAvg) / unitAvg * 100) : null;
+        unitComparison = { avgPerKg: unitAvg, minPerKg: unitMin, currentPerKg: ppkg, pctFromAvg: unitPct };
+      }
+    }
+
+    return { isNew: false, avgP, minP, maxP, pctFromAvg, verdict, verdictIcon, verdictColor, cheapest, storeHistory, brandHistory, unitComparison, totalRecords: matches.length };
+  }, [form.product, form.totalPrice, form.store, form.brand, preview.pricePerKg, entries]);
+
   const syncLabel = syncStatus==="syncing" ? <><span className="spin">⚙️</span> Syncing…</>
                   : syncStatus==="synced"  ? `✓ ${lastSynced?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`
                   : syncStatus==="error"   ? "⚠️ Sync error"
@@ -976,6 +1052,95 @@ function App() {
                   </div>
                 ):null)}
               </div>
+            )}
+
+            {/* ── Price Comparison Panel ── */}
+            {comparison && !editId && (
+              comparison.isNew ? (
+                <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:14,marginBottom:16}}>
+                  <div style={{fontSize:14,fontWeight:700,color:"#1e40af",marginBottom:2}}>🆕 New product!</div>
+                  <div style={{fontSize:13,color:"#3b82f6"}}>No history yet — this will be your first record for "{form.product}".</div>
+                </div>
+              ) : (
+                <div style={{background:"#fafafa",border:"1px solid #e2e8f0",borderRadius:12,padding:14,marginBottom:16}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                    <div style={{fontSize:14,fontWeight:800,color:"#334155"}}>📊 Price Check</div>
+                    <div style={{fontSize:13,fontWeight:700,color:comparison.verdictColor}}>
+                      {comparison.verdictIcon} {comparison.verdict}{comparison.pctFromAvg!=null && ` (${comparison.pctFromAvg>0?"+":""}${comparison.pctFromAvg}%)`}
+                    </div>
+                  </div>
+
+                  {/* Overall product history */}
+                  <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:10,padding:"8px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#64748b",width:"100%"}}>ALL HISTORY ({comparison.totalRecords} records)</div>
+                    {[["Avg",comparison.avgP,"#0f172a"],["Min",comparison.minP,"#16a34a"],["Max",comparison.maxP,"#dc2626"]].map(([l,v,c])=>(
+                      <div key={l} style={{fontSize:12}}>
+                        <span style={{color:"#64748b"}}>{l} </span>
+                        <strong style={{color:c}}>{fmt$(v)}</strong>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Same store history */}
+                  {comparison.storeHistory && (
+                    <div style={{marginBottom:10,padding:"8px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:4}}>AT {(form.store||"").toUpperCase()} ({comparison.storeHistory.count}×)</div>
+                      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+                        {comparison.storeHistory.lastPrice!=null && (
+                          <div style={{fontSize:12}}>
+                            <span style={{color:"#64748b"}}>Last </span>
+                            <strong>{fmt$(comparison.storeHistory.lastPrice)}</strong>
+                            {comparison.storeHistory.lastDate && <span style={{color:"#94a3b8",fontSize:11}}> ({comparison.storeHistory.lastDate})</span>}
+                          </div>
+                        )}
+                        {comparison.storeHistory.trend && comparison.storeHistory.trend!=="same" && (
+                          <span style={{fontSize:12,fontWeight:700,color:comparison.storeHistory.trend==="up"?"#dc2626":"#16a34a"}}>
+                            {comparison.storeHistory.trend==="up"?"📈 Price went up":"📉 Price dropped"}
+                          </span>
+                        )}
+                        {comparison.storeHistory.trend==="same" && (
+                          <span style={{fontSize:12,fontWeight:600,color:"#64748b"}}>→ Same price</span>
+                        )}
+                      </div>
+                      {comparison.storeHistory.avgPrice!=null && (
+                        <div style={{fontSize:12,marginTop:4}}>
+                          <span style={{color:"#64748b"}}>Store avg </span>
+                          <strong>{fmt$(comparison.storeHistory.avgPrice)}</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Brand history */}
+                  {comparison.brandHistory && (
+                    <div style={{marginBottom:10,padding:"8px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:4}}>{(form.brand||"").toUpperCase()} ({comparison.brandHistory.count}×)</div>
+                      <div style={{display:"flex",gap:12,fontSize:12}}>
+                        <div><span style={{color:"#64748b"}}>Avg </span><strong>{fmt$(comparison.brandHistory.avgPrice)}</strong></div>
+                        <div><span style={{color:"#64748b"}}>Best </span><strong style={{color:"#16a34a"}}>{fmt$(comparison.brandHistory.minPrice)}</strong></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Best price ever */}
+                  {comparison.cheapest && (
+                    <div style={{fontSize:12,color:"#64748b",padding:"6px 10px",background:"#f0fdf4",borderRadius:8,border:"1px solid #dcfce7"}}>
+                      🏆 Best ever: <strong style={{color:"#16a34a"}}>{fmt$(comparison.minP)}</strong>
+                      {comparison.cheapest.store && <> at <strong>{comparison.cheapest.store}</strong></>}
+                      {comparison.cheapest.date && <span style={{color:"#94a3b8"}}> ({comparison.cheapest.date})</span>}
+                    </div>
+                  )}
+
+                  {/* Unit price comparison */}
+                  {comparison.unitComparison && (
+                    <div style={{fontSize:12,color:"#64748b",marginTop:8,padding:"6px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                      ⚖️ Unit price: <strong style={{color:comparison.unitComparison.pctFromAvg!=null&&comparison.unitComparison.pctFromAvg>5?"#dc2626":comparison.unitComparison.pctFromAvg!=null&&comparison.unitComparison.pctFromAvg<=-10?"#16a34a":"#0f172a"}}>{fmt$3(comparison.unitComparison.currentPerKg)}/kg</strong>
+                      <span> vs avg </span><strong>{fmt$3(comparison.unitComparison.avgPerKg)}/kg</strong>
+                      {comparison.unitComparison.pctFromAvg!=null && <span style={{fontWeight:700,color:comparison.unitComparison.pctFromAvg>5?"#dc2626":comparison.unitComparison.pctFromAvg<=-10?"#16a34a":"#d97706"}}> ({comparison.unitComparison.pctFromAvg>0?"+":""}{comparison.unitComparison.pctFromAvg}%)</span>}
+                    </div>
+                  )}
+                </div>
+              )
             )}
 
             <button className="btn btn-primary"   onClick={save}>{editId?"Save Changes":"Add Entry"}</button>
