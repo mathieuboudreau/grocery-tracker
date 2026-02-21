@@ -693,7 +693,10 @@ function App() {
       return { brand:b, count:bRows.length, avgPrice:avg(bPrices), minPrice:minSafe(bPrices), maxPrice:maxSafe(bPrices), avgPpkg:avg(ppkg), bUnitAvg, bUnitMin, bUnitMax, storeAvgs, maxAvg, storeUnitAvgs, maxUnitAvg };
     });
 
-    return { product:p, count:pRows.length, avgPrice:avg(prices), minPrice:minSafe(prices), maxPrice:maxSafe(prices), avgPpkg:avg(ppkgAll), unitLabel, unitAvg, unitMin, unitMax, brandData };
+    const imageEntry = pRows.find(e => e.imageUrl && !e.imageUrl.startsWith('s3://'));
+    const image = imageEntry ? imageEntry.imageUrl : null;
+
+    return { product:p, image, count:pRows.length, avgPrice:avg(prices), minPrice:minSafe(prices), maxPrice:maxSafe(prices), avgPpkg:avg(ppkgAll), unitLabel, unitAvg, unitMin, unitMax, brandData };
     });
   }, [entries, analyticsTag, analyticsCat]);
 
@@ -1247,7 +1250,10 @@ function App() {
                     ? <div style={{color:"#64748b",fontSize:13}}>No entries match{analyticsSearch?" your search":""}.</div>
                     : filteredAnalytics.map(p=>(
                     <div key={p.product} className="product-row">
-                      <div className="product-name">{p.product} <span style={{fontWeight:400,color:"#64748b",fontSize:12}}>({p.count} record{p.count!==1?"s":""})</span></div>
+                      <div className="product-name" style={{display:"flex",alignItems:"center",gap:10}}>
+                        {p.image && <img src={p.image} alt={p.product} style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"1px solid #e2e8f0",flexShrink:0}} />}
+                        <span>{p.product} <span style={{fontWeight:400,color:"#64748b",fontSize:12}}>({p.count} record{p.count!==1?"s":""})</span></span>
+                      </div>
 
                       {/* Product-level summary */}
                       <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"6px 0 2px",paddingLeft:2}}>
