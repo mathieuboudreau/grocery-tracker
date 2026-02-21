@@ -355,6 +355,7 @@ function App() {
   const cameraRef = useRef();
   const pushTimer = useRef(null);
   const isFirstRender = useRef(true);
+  const lastStore = useRef("");
 
   useEffect(() => {
     try {
@@ -455,15 +456,16 @@ function App() {
     const row = deriveRow({ ...form, id: editId||uid(), tags: form.tags||[], updatedAt: new Date().toISOString() });
     // Carry imageS3Path through so pushCloud can use it
     if (form.imageS3Path) row.imageS3Path = form.imageS3Path;
+    if (form.store) lastStore.current = form.store;
     setEntries(prev => editId ? prev.map(e=>e.id===editId?row:e) : [...prev, row]);
-    setForm({ ...EMPTY, date:TODAY() }); setEditId(null); setTab("db");
+    setForm({ ...EMPTY, date:TODAY(), store:lastStore.current }); setEditId(null); setTab("db");
   };
 
   const startEdit = e => { setForm({...e, tags:e.tags||[]}); setEditId(e.id); setTab("add"); };
-  const cancel    = () => { setForm({...EMPTY,date:TODAY()}); setEditId(null); setTab("db"); };
+  const cancel    = () => { setForm({...EMPTY,date:TODAY(), store:lastStore.current}); setEditId(null); setTab("db"); };
   const del       = id => { if (window.confirm("Delete this entry?")) setEntries(p=>p.map(e=>e.id===id?{...e, deletedAt:new Date().toISOString(), updatedAt:new Date().toISOString()}:e)); };
   const purgeDeleted = () => { if (window.confirm(`Permanently remove ${deletedCount} deleted entries? Make sure both devices are synced first.`)) { setEntries(p=>p.filter(e=>!e.deletedAt)); showToast(`🗑️ Purged ${deletedCount} deleted entries`); } };
-  const switchTab = id => { if(id!=="add"){setEditId(null);setForm({...EMPTY,date:TODAY()});} setTab(id); };
+  const switchTab = id => { if(id!=="add"){setEditId(null);setForm({...EMPTY,date:TODAY(), store:lastStore.current});} setTab(id); };
   const filterByTag = tag => { setTagFilter(tag); setSearchQ(""); };
 
   /* ── Export ── */
