@@ -717,20 +717,58 @@ function App() {
     if (!prices.length) return { isNew: true };
 
     const avgP = avg(prices), minP = minSafe(prices), maxP = maxSafe(prices);
-    const pctFromAvg = avgP ? Math.round((price - avgP) / avgP * 100) : null;
+
+    // Determine best normalized price for verdict: $/kg > $/unit > total
+    const ppkg = preview.pricePerKg;
+    const ppu = preview.pricePerUnit;
+    let verdictPct = null, verdictBasis = "total";
+
+    if (ppkg != null) {
+      const histPpkg = matches.map(e => e.pricePerKg).filter(x => x != null);
+      if (histPpkg.length) {
+        const a = avg(histPpkg);
+        if (a) { verdictPct = Math.round((ppkg - a) / a * 100); verdictBasis = "weight"; }
+      }
+    }
+    if (verdictPct === null && ppu != null) {
+      const histPpu = matches.map(e => e.pricePerUnit).filter(x => x != null);
+      if (histPpu.length) {
+        const a = avg(histPpu);
+        if (a) { verdictPct = Math.round((ppu - a) / a * 100); verdictBasis = "unit"; }
+      }
+    }
+    if (verdictPct === null && avgP) {
+      verdictPct = Math.round((price - avgP) / avgP * 100);
+      verdictBasis = "total";
+    }
 
     // Verdict
     let verdict = "average", verdictIcon = "🟡", verdictColor = "#d97706";
-    if (pctFromAvg !== null) {
-      if (pctFromAvg <= -10) { verdict = "great deal"; verdictIcon = "🟢"; verdictColor = "#16a34a"; }
-      else if (pctFromAvg <= 5) { verdict = "average"; verdictIcon = "🟡"; verdictColor = "#d97706"; }
+    if (verdictPct !== null) {
+      if (verdictPct <= -10) { verdict = "great deal"; verdictIcon = "🟢"; verdictColor = "#16a34a"; }
+      else if (verdictPct <= 5) { verdict = "average"; verdictIcon = "🟡"; verdictColor = "#d97706"; }
       else { verdict = "pricey"; verdictIcon = "🔴"; verdictColor = "#dc2626"; }
     }
+    const verdictNote = verdictBasis === "weight" ? "by weight" : verdictBasis === "unit" ? "by unit" : "by total";
 
-    // Best price ever
-    const cheapest = matches.filter(e => parseFloat(e.totalPrice) === minP)[0];
+    // Best price ever (use normalized: $/kg > $/unit > total)
+    let cheapest, bestLabel;
+    if (ppkg != null && matches.some(e => e.pricePerKg != null)) {
+      const withPpkg = matches.filter(e => e.pricePerKg != null);
+      const bestPpkg = minSafe(withPpkg.map(e => e.pricePerKg));
+      cheapest = withPpkg.find(e => e.pricePerKg === bestPpkg);
+      bestLabel = fmt$(cheapest?.pricePerKg) + "/kg";
+    } else if (ppu != null && matches.some(e => e.pricePerUnit != null)) {
+      const withPpu = matches.filter(e => e.pricePerUnit != null);
+      const bestPpu = minSafe(withPpu.map(e => e.pricePerUnit));
+      cheapest = withPpu.find(e => e.pricePerUnit === bestPpu);
+      bestLabel = fmt$(cheapest?.pricePerUnit) + "/unit";
+    } else {
+      cheapest = matches.filter(e => parseFloat(e.totalPrice) === minP)[0];
+      bestLabel = fmt$(minP);
+    }
 
-    // Same store history
+    // Same store history (compare normalized)
     const store = (form.store||"").trim().toLowerCase();
     let storeHistory = null;
     if (store) {
@@ -739,11 +777,24 @@ function App() {
       if (storeMatches.length) {
         const storePrices = storeMatches.map(e => parseFloat(e.totalPrice)).filter(x => !isNaN(x));
         const lastEntry = storeMatches[0];
-        const lastPrice = parseFloat(lastEntry.totalPrice);
-        const trend = !isNaN(lastPrice) ? (price > lastPrice ? "up" : price < lastPrice ? "down" : "same") : null;
+        // Compare using best normalized price
+        let trend = null, lastLabel = null;
+        if (ppkg != null && lastEntry.pricePerKg != null) {
+          trend = ppkg > lastEntry.pricePerKg ? "up" : ppkg < lastEntry.pricePerKg ? "down" : "same";
+          lastLabel = fmt$(lastEntry.pricePerKg) + "/kg";
+        } else if (ppu != null && lastEntry.pricePerUnit != null) {
+          trend = ppu > lastEntry.pricePerUnit ? "up" : ppu < lastEntry.pricePerUnit ? "down" : "same";
+          lastLabel = fmt$(lastEntry.pricePerUnit) + "/unit";
+        } else {
+          const lastPrice = parseFloat(lastEntry.totalPrice);
+          if (!isNaN(lastPrice)) {
+            trend = price > lastPrice ? "up" : price < lastPrice ? "down" : "same";
+            lastLabel = fmt$(lastPrice);
+          }
+        }
         storeHistory = {
           count: storeMatches.length,
-          lastPrice: isNaN(lastPrice) ? null : lastPrice,
+          lastLabel,
           lastDate: lastEntry.date,
           avgPrice: avg(storePrices),
           trend
@@ -764,9 +815,8 @@ function App() {
       }
     }
 
-    // Unit price comparison (if current entry has weight)
+    // Unit price comparison detail
     let unitComparison = null;
-    const ppkg = preview.pricePerKg;
     if (ppkg != null) {
       const withUnit = matches.filter(e => e.pricePerKg != null);
       if (withUnit.length) {
@@ -777,8 +827,8 @@ function App() {
       }
     }
 
-    return { isNew: false, avgP, minP, maxP, pctFromAvg, verdict, verdictIcon, verdictColor, cheapest, storeHistory, brandHistory, unitComparison, totalRecords: matches.length };
-  }, [form.product, form.totalPrice, form.store, form.brand, preview.pricePerKg, entries]);
+    return { isNew: false, avgP, minP, maxP, verdictPct, verdict, verdictIcon, verdictColor, verdictNote, cheapest, bestLabel, storeHistory, brandHistory, unitComparison, totalRecords: matches.length };
+  }, [form.product, form.totalPrice, form.store, form.brand, preview.pricePerKg, preview.pricePerUnit, entries]);
 
   const syncLabel = syncStatus==="syncing" ? <><span className="spin">⚙️</span> Syncing…</>
                   : syncStatus==="synced"  ? `✓ ${lastSynced?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`
@@ -1066,7 +1116,7 @@ function App() {
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                     <div style={{fontSize:14,fontWeight:800,color:"#334155"}}>📊 Price Check</div>
                     <div style={{fontSize:13,fontWeight:700,color:comparison.verdictColor}}>
-                      {comparison.verdictIcon} {comparison.verdict}{comparison.pctFromAvg!=null && ` (${comparison.pctFromAvg>0?"+":""}${comparison.pctFromAvg}%)`}
+                      {comparison.verdictIcon} {comparison.verdict}{comparison.verdictPct!=null && ` (${comparison.verdictPct>0?"+":""}${comparison.verdictPct}% ${comparison.verdictNote})`}
                     </div>
                   </div>
 
@@ -1086,10 +1136,10 @@ function App() {
                     <div style={{marginBottom:10,padding:"8px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
                       <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:4}}>AT {(form.store||"").toUpperCase()} ({comparison.storeHistory.count}×)</div>
                       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-                        {comparison.storeHistory.lastPrice!=null && (
+                        {comparison.storeHistory.lastLabel!=null && (
                           <div style={{fontSize:12}}>
                             <span style={{color:"#64748b"}}>Last </span>
-                            <strong>{fmt$(comparison.storeHistory.lastPrice)}</strong>
+                            <strong>{comparison.storeHistory.lastLabel}</strong>
                             {comparison.storeHistory.lastDate && <span style={{color:"#94a3b8",fontSize:11}}> ({comparison.storeHistory.lastDate})</span>}
                           </div>
                         )}
@@ -1125,7 +1175,7 @@ function App() {
                   {/* Best price ever */}
                   {comparison.cheapest && (
                     <div style={{fontSize:12,color:"#64748b",padding:"6px 10px",background:"#f0fdf4",borderRadius:8,border:"1px solid #dcfce7"}}>
-                      🏆 Best ever: <strong style={{color:"#16a34a"}}>{fmt$(comparison.minP)}</strong>
+                      🏆 Best ever: <strong style={{color:"#16a34a"}}>{comparison.bestLabel}</strong>
                       {comparison.cheapest.store && <> at <strong>{comparison.cheapest.store}</strong></>}
                       {comparison.cheapest.date && <span style={{color:"#94a3b8"}}> ({comparison.cheapest.date})</span>}
                     </div>
