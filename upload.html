@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛒 Grocery Bulk Import</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { height: 100%; }
+  body { font-family: 'DM Sans', sans-serif; color: #0f172a; background: #f1f5f9; min-height: 100vh; }
+
+  .app { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .logo { font-size: 24px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
+  .logo span { color: #94a3b8; font-weight: 500; font-size: 15px; margin-left: 8px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .db-count { font-size: 13px; color: #64748b; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px; }
+  .sync-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; }
+  .sync-pill.ok { background: #dcfce7; color: #16a34a; }
+  .sync-pill.err { background: #fee2e2; color: #dc2626; }
+  .sync-pill.loading { background: #dbeafe; color: #1d4ed8; }
+
+  /* Setup */
+  .setup { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; }
+  .setup-title { font-size: 20px; font-weight: 800; color: #2563eb; margin-bottom: 8px; }
+  .setup-desc { font-size: 14px; color: #64748b; margin-bottom: 20px; max-width: 360px; line-height: 1.6; }
+  .setup-input { width: 100%; max-width: 340px; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; font-size: 16px; font-family: inherit; background: #fff; outline: none; margin-bottom: 10px; }
+  .setup-input:focus { border-color: #3b82f6; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.9; }
+  .btn:active { opacity: 0.7; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-danger { background: #fee2e2; color: #dc2626; }
+  .btn-secondary { background: #fff; color: #475569; border: 1px solid #e2e8f0; }
+  .btn-lg { padding: 14px 28px; font-size: 16px; border-radius: 12px; }
+
+  /* Drop zone */
+  .dropzone {
+    border: 2.5px dashed #cbd5e1; border-radius: 16px; padding: 48px 24px;
+    text-align: center; cursor: pointer; transition: all 0.2s;
+    background: #fff; margin-bottom: 20px;
+  }
+  .dropzone:hover, .dropzone.dragover { border-color: #3b82f6; background: #eff6ff; }
+  .dropzone-icon { font-size: 48px; margin-bottom: 12px; }
+  .dropzone-text { font-size: 16px; font-weight: 600; color: #475569; margin-bottom: 4px; }
+  .dropzone-sub { font-size: 13px; color: #94a3b8; }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar-count { font-size: 14px; color: #64748b; font-weight: 600; }
+
+  /* Progress */
+  .progress-bar { width: 100%; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-bottom: 16px; }
+  .progress-fill { height: 100%; background: #2563eb; border-radius: 999px; transition: width 0.3s; }
+
+  /* Queue grid */
+  .queue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-bottom: 24px; }
+
+  /* Item card */
+  .item-card {
+    background: #fff; border: 1.5px solid #e2e8f0; border-radius: 14px;
+    overflow: hidden; transition: border-color 0.15s;
+  }
+  .item-card.error { border-color: #fca5a5; background: #fef2f2; }
+  .item-card.scanning { border-color: #93c5fd; }
+  .item-card.scanned { border-color: #86efac; }
+
+  .item-img-row { display: flex; gap: 12px; padding: 12px 12px 0; align-items: flex-start; }
+  .item-thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; border: 1px solid #e2e8f0; flex-shrink: 0; background: #f8fafc; }
+  .item-status { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 72px; }
+  .item-status-text { font-size: 13px; color: #64748b; }
+  .item-status-product { font-size: 16px; font-weight: 700; color: #1e40af; }
+  .item-status-brand { font-size: 13px; color: #3b82f6; font-weight: 600; }
+  .item-status-price { font-size: 15px; font-weight: 800; color: #16a34a; margin-top: 2px; }
+
+  .item-fields { padding: 10px 12px 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .item-field { display: flex; flex-direction: column; gap: 2px; }
+  .item-field.full { grid-column: 1 / -1; }
+  .item-field label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .item-field input, .item-field select {
+    border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px;
+    font-size: 13px; font-family: inherit; background: #f8fafc; color: #0f172a;
+    outline: none; width: 100%;
+  }
+  .item-field input:focus, .item-field select:focus { border-color: #3b82f6; background: #fff; }
+
+  .item-actions { padding: 0 12px 10px; display: flex; justify-content: flex-end; }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; animation: spin 0.8s linear infinite; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #fff; padding: 10px 24px; border-radius: 999px;
+    font-size: 14px; font-weight: 600; z-index: 999; white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    animation: fadeInOut 3s ease forwards;
+  }
+  @keyframes fadeInOut { 0%{opacity:0;transform:translateX(-50%) translateY(10px)} 10%{opacity:1;transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0} }
+
+  /* Store field row */
+  .store-row { display: flex; gap: 8px; margin-bottom: 16px; align-items: flex-end; }
+  .store-row .item-field { flex: 1; }
+  .store-row .item-field label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .store-row input { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 15px; font-family: inherit; background: #fff; width: 100%; outline: none; }
+  .store-row input:focus { border-color: #3b82f6; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useCallback } = React;
+
+const LAMBDA_URL = "https://3jdo4h6d3mmemlnpte734n3wny0shxzn.lambda-url.ca-central-1.on.aws/";
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const TODAY = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const fmt$ = v => v != null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : null;
+
+function deriveRow(row) {
+  const tp=parseFloat(row.totalPrice), u=parseInt(row.units);
+  const w=parseFloat(row.weight), rp=parseFloat(row.regPrice);
+  let pricePerUnit=null, pricePerKg=null, pricePer100g=null, saving=null;
+  if (!isNaN(tp)) {
+    if (!isNaN(u)&&u>0) pricePerUnit=+(tp/u).toFixed(3);
+    if (!isNaN(w)&&w>0&&row.unit) {
+      const ul=(row.unit||"").toLowerCase();
+      const g=ul==="g"||ul==="ml"?w:ul==="kg"||ul==="l"?w*1000:ul==="oz"?w*28.3495:ul==="lb"?w*453.592:null;
+      if(g){pricePerKg=+(tp/g*1000).toFixed(3);pricePer100g=+(tp/g*100).toFixed(3);}
+    }
+    if(!isNaN(rp)&&rp>0)saving=+(rp-tp).toFixed(2);
+  }
+  return {...row, pricePerUnit, pricePerKg, pricePer100g, saving};
+}
+
+function mergeEntries(local, incoming) {
+  const map = new Map(local.map(e=>[e.id,e]));
+  incoming.forEach(row => {
+    const iTs=row.updatedAt||"0", ex=map.get(row.id), eTs=ex?.updatedAt||"0";
+    if(!ex||iTs>eTs) map.set(row.id, deriveRow({...row, tags:row.tags||[], updatedAt:row.updatedAt||new Date().toISOString()}));
+  });
+  return [...map.values()];
+}
+
+function createThumbnail(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const size = Math.min(img.width, img.height);
+        const x=(img.width-size)/2, y=(img.height-size)/2;
+        canvas.width=200; canvas.height=200;
+        ctx.drawImage(img, x, y, size, size, 0, 0, 200, 200);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function App() {
+  const [secret, setSecret] = useState(() => localStorage.getItem("gt_secret") || "");
+  const [secretInput, setSecretInput] = useState("");
+  const [cloudEntries, setCloudEntries] = useState([]);
+  const [connected, setConnected] = useState(false);
+  const [connError, setConnError] = useState(null);
+  const [items, setItems] = useState([]); // {id, file, thumbUrl, status, data}
+  const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState({ done: 0, total: 0 });
+  const [uploading, setUploading] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [defaultStore, setDefaultStore] = useState("");
+  const [defaultCategory, setDefaultCategory] = useState("");
+  const fileRef = useRef();
+  const dropRef = useRef();
+  const abortRef = useRef(false);
+
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 3200); };
+
+  // Connect
+  const connect = async (sk) => {
+    const key = sk || secret;
+    if (!key) return;
+    setConnError(null);
+    try {
+      const res = await fetch(LAMBDA_URL, { headers: { "x-secret": key } });
+      if (res.status === 403) { setConnError("Wrong secret key"); return; }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const remote = (data.entries || []).filter(e => !e.deletedAt);
+      setCloudEntries(data.entries || []);
+      setConnected(true);
+      localStorage.setItem("gt_secret", key);
+      setSecret(key);
+      showToast(`✅ Connected — ${remote.length} entries in database`);
+    } catch { setConnError("Connection failed"); }
+  };
+
+  const saveSecret = () => { const s = secretInput.trim(); if (s) connect(s); };
+
+  // Add files
+  const addFiles = async (fileList) => {
+    const files = [...fileList].filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    const newItems = await Promise.all(files.map(async f => {
+      const thumbUrl = await createThumbnail(f);
+      return {
+        id: uid(),
+        file: f,
+        thumbUrl,
+        status: 'pending', // pending | scanning | scanned | error
+        data: { product: '', brand: '', store: defaultStore, category: defaultCategory, totalPrice: '', regPrice: '', weight: '', unit: '', units: '', onSale: '', notes: '', tags: [], date: TODAY(), imageUrl: null, imageS3Path: null }
+      };
+    }));
+    setItems(prev => [...prev, ...newItems]);
+  };
+
+  // Drop handlers
+  const onDragOver = e => { e.preventDefault(); dropRef.current?.classList.add('dragover'); };
+  const onDragLeave = () => dropRef.current?.classList.remove('dragover');
+  const onDrop = e => { e.preventDefault(); dropRef.current?.classList.remove('dragover'); addFiles(e.dataTransfer.files); };
+
+  // Scan all pending
+  const scanAll = async () => {
+    const pending = items.filter(i => i.status === 'pending' || i.status === 'error');
+    if (!pending.length) return;
+    setScanning(true);
+    abortRef.current = false;
+    setScanProgress({ done: 0, total: pending.length });
+
+    for (let idx = 0; idx < pending.length; idx++) {
+      if (abortRef.current) break;
+      const item = pending[idx];
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'scanning' } : i));
+
+      try {
+        const base64 = await fileToBase64(item.file);
+        const thumbBase64 = item.thumbUrl.split(',')[1];
+        const res = await fetch(LAMBDA_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64, thumbnail: thumbBase64, mediaType: item.file.type })
+        });
+        if (!res.ok) throw new Error(`Scan failed (${res.status})`);
+        const extracted = await res.json();
+
+        setItems(prev => prev.map(i => i.id === item.id ? {
+          ...i,
+          status: 'scanned',
+          data: {
+            ...i.data,
+            product: extracted.product || '',
+            brand: extracted.brand || '',
+            totalPrice: extracted.price != null ? extracted.price.toString() : '',
+            weight: extracted.size != null ? extracted.size.toString() : '',
+            unit: extracted.unit || '',
+            onSale: extracted.sale ? 'Y' : '',
+            notes: extracted.notes || '',
+            store: i.data.store || defaultStore,
+            category: i.data.category || defaultCategory,
+            imageUrl: item.thumbUrl,
+            imageS3Path: extracted.imageUrl || null
+          }
+        } : i));
+      } catch (err) {
+        setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'error' } : i));
+      }
+      setScanProgress({ done: idx + 1, total: pending.length });
+    }
+    setScanning(false);
+  };
+
+  const stopScan = () => { abortRef.current = true; };
+
+  // Remove item
+  const removeItem = id => setItems(prev => prev.filter(i => i.id !== id));
+
+  // Update item field
+  const updateField = (id, field, value) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, data: { ...i.data, [field]: value } } : i));
+  };
+
+  // Upload all scanned
+  const uploadAll = async () => {
+    const scanned = items.filter(i => i.status === 'scanned' && i.data.product.trim());
+    if (!scanned.length) { showToast("⚠️ No scanned items to upload"); return; }
+    setUploading(true);
+    try {
+      // Pull latest from cloud
+      const pullRes = await fetch(LAMBDA_URL, { headers: { "x-secret": secret } });
+      if (!pullRes.ok) throw new Error("Pull failed");
+      const pullData = await pullRes.json();
+      const remote = pullData.entries || [];
+
+      // Build new entries
+      const newEntries = scanned.map(i => {
+        const row = deriveRow({
+          ...i.data,
+          id: uid(),
+          tags: i.data.tags || [],
+          updatedAt: new Date().toISOString()
+        });
+        // For cloud: use S3 path as imageUrl
+        const cloudRow = { ...row };
+        if (cloudRow.imageS3Path) { cloudRow.imageUrl = cloudRow.imageS3Path; }
+        delete cloudRow.imageS3Path;
+        return cloudRow;
+      });
+
+      // Merge and push
+      const merged = mergeEntries(remote, newEntries);
+      const pushRes = await fetch(LAMBDA_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-secret": secret },
+        body: JSON.stringify({ entries: merged })
+      });
+      if (!pushRes.ok) throw new Error("Push failed");
+
+      showToast(`✅ Uploaded ${scanned.length} entries!`);
+      // Remove uploaded items from the queue
+      const uploadedIds = new Set(scanned.map(i => i.id));
+      setItems(prev => prev.filter(i => !uploadedIds.has(i.id)));
+      setCloudEntries(merged);
+    } catch (err) {
+      showToast("❌ Upload failed — " + (err.message || "try again"));
+    }
+    setUploading(false);
+  };
+
+  // Apply default store/category to all pending/scanned
+  const applyDefaults = () => {
+    setItems(prev => prev.map(i => ({
+      ...i,
+      data: {
+        ...i.data,
+        store: defaultStore || i.data.store,
+        category: defaultCategory || i.data.category
+      }
+    })));
+    showToast("✅ Defaults applied to all items");
+  };
+
+  const pendingCount = items.filter(i => i.status === 'pending').length;
+  const scannedCount = items.filter(i => i.status === 'scanned').length;
+  const errorCount = items.filter(i => i.status === 'error').length;
+  const activeEntries = cloudEntries.filter(e => !e.deletedAt).length;
+
+  // ── Setup screen ──
+  if (!connected) return (
+    <div className="app">
+      <div className="setup">
+        <div style={{ fontSize: 56, marginBottom: 16 }}>📦</div>
+        <div className="setup-title">Bulk Import Tool</div>
+        <div className="setup-desc">Drop a bunch of product photos, scan them all at once, review, then push to your grocery database.</div>
+        <input className="setup-input" type="password" placeholder="Your sync key…"
+          value={secretInput} onChange={e => setSecretInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && saveSecret()} autoFocus />
+        <button className="btn btn-primary btn-lg" onClick={saveSecret} style={{ width: '100%', maxWidth: 340 }}>Connect →</button>
+        {connError && <div style={{ color: '#dc2626', fontSize: 14, marginTop: 12, fontWeight: 600 }}>❌ {connError}</div>}
+      </div>
+    </div>
+  );
+
+  // ── Main ──
+  return (
+    <div className="app">
+      <div className="header">
+        <div className="logo">📦 Bulk Import <span>Grocery Tracker</span></div>
+        <div className="header-right">
+          <div className="db-count">☁️ {activeEntries} entries in cloud</div>
+          <div className={`sync-pill ok`}>✓ Connected</div>
+        </div>
+      </div>
+
+      {/* Default store/category */}
+      <div className="store-row">
+        <div className="item-field">
+          <label>Default Store</label>
+          <input value={defaultStore} onChange={e => setDefaultStore(e.target.value)} placeholder="e.g. Metro" />
+        </div>
+        <div className="item-field">
+          <label>Default Category</label>
+          <input value={defaultCategory} onChange={e => setDefaultCategory(e.target.value)} placeholder="e.g. Dairy" />
+        </div>
+        <button className="btn btn-secondary" onClick={applyDefaults} style={{ marginBottom: 0, height: 42, flexShrink: 0 }}>Apply to all</button>
+      </div>
+
+      {/* Drop zone */}
+      <div ref={dropRef} className="dropzone" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+        onClick={() => fileRef.current?.click()}>
+        <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
+          onChange={e => { addFiles(e.target.files); e.target.value = ''; }} />
+        <div className="dropzone-icon">📸</div>
+        <div className="dropzone-text">Drop product photos here</div>
+        <div className="dropzone-sub">or click to browse · JPG, PNG, HEIC</div>
+      </div>
+
+      {/* Toolbar */}
+      {items.length > 0 && (
+        <>
+          <div className="toolbar">
+            <div className="toolbar-count">
+              {items.length} photo{items.length !== 1 ? 's' : ''}
+              {scannedCount > 0 && <span style={{ color: '#16a34a' }}> · {scannedCount} scanned</span>}
+              {pendingCount > 0 && <span style={{ color: '#d97706' }}> · {pendingCount} pending</span>}
+              {errorCount > 0 && <span style={{ color: '#dc2626' }}> · {errorCount} failed</span>}
+            </div>
+            <div style={{ flex: 1 }} />
+
+            {scanning ? (
+              <button className="btn btn-danger" onClick={stopScan}>⏹ Stop</button>
+            ) : (
+              <>
+                {(pendingCount > 0 || errorCount > 0) && (
+                  <button className="btn btn-primary" onClick={scanAll}>
+                    🔍 Scan {pendingCount + errorCount} photo{pendingCount + errorCount !== 1 ? 's' : ''}
+                  </button>
+                )}
+              </>
+            )}
+
+            {scannedCount > 0 && !scanning && (
+              <button className="btn btn-success" onClick={uploadAll} disabled={uploading}>
+                {uploading ? <><span className="spin">⚙️</span> Uploading…</> : `☁️ Upload ${scannedCount} to cloud`}
+              </button>
+            )}
+
+            <button className="btn btn-danger" onClick={() => { if (window.confirm(`Remove all ${items.length} items?`)) setItems([]); }}>Clear all</button>
+          </div>
+
+          {/* Progress bar */}
+          {scanning && (
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: `${(scanProgress.done / scanProgress.total * 100).toFixed(0)}%` }} />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Queue grid */}
+      <div className="queue-grid">
+        {items.map(item => (
+          <div key={item.id} className={`item-card ${item.status}`}>
+            <div className="item-img-row">
+              <img className="item-thumb" src={item.thumbUrl} alt="" />
+              <div className="item-status">
+                {item.status === 'pending' && <div className="item-status-text">⏳ Waiting to scan…</div>}
+                {item.status === 'scanning' && <div className="item-status-text"><span className="spin">⚙️</span> Scanning…</div>}
+                {item.status === 'error' && <div className="item-status-text" style={{ color: '#dc2626' }}>❌ Scan failed — will retry</div>}
+                {item.status === 'scanned' && (
+                  <>
+                    <div className="item-status-product">{item.data.product || '(no product)'}</div>
+                    {item.data.brand && <div className="item-status-brand">{item.data.brand}</div>}
+                    {item.data.totalPrice && <div className="item-status-price">{fmt$(parseFloat(item.data.totalPrice))}</div>}
+                  </>
+                )}
+              </div>
+              <button className="btn btn-danger" style={{ padding: '4px 10px', fontSize: 13, width: 'auto', flexShrink: 0, alignSelf: 'flex-start' }}
+                onClick={() => removeItem(item.id)}>×</button>
+            </div>
+
+            {/* Editable fields (only show after scan) */}
+            {item.status === 'scanned' && (
+              <div className="item-fields">
+                <div className="item-field">
+                  <label>Product</label>
+                  <input value={item.data.product} onChange={e => updateField(item.id, 'product', e.target.value)} />
+                </div>
+                <div className="item-field">
+                  <label>Brand</label>
+                  <input value={item.data.brand} onChange={e => updateField(item.id, 'brand', e.target.value)} />
+                </div>
+                <div className="item-field">
+                  <label>Store</label>
+                  <input value={item.data.store} onChange={e => updateField(item.id, 'store', e.target.value)} />
+                </div>
+                <div className="item-field">
+                  <label>Category</label>
+                  <input value={item.data.category} onChange={e => updateField(item.id, 'category', e.target.value)} />
+                </div>
+                <div className="item-field">
+                  <label>Price ($)</label>
+                  <input type="number" step="0.01" value={item.data.totalPrice} onChange={e => updateField(item.id, 'totalPrice', e.target.value)} />
+                </div>
+                <div className="item-field">
+                  <label>Reg. Price ($)</label>
+                  <input type="number" step="0.01" value={item.data.regPrice} onChange={e => updateField(item.id, 'regPrice', e.target.value)} />
+                </div>
+                <div className="item-field">
+                  <label>Weight</label>
+                  <input type="number" value={item.data.weight} onChange={e => updateField(item.id, 'weight', e.target.value)} />
+                </div>
+                <div className="item-field">
+                  <label>Unit</label>
+                  <select value={item.data.unit} onChange={e => updateField(item.id, 'unit', e.target.value)}>
+                    {["","g","kg","mL","L","oz","lb"].map(u => <option key={u} value={u}>{u || "—"}</option>)}
+                  </select>
+                </div>
+                <div className="item-field">
+                  <label>Units (#)</label>
+                  <input type="number" min="1" value={item.data.units} onChange={e => updateField(item.id, 'units', e.target.value)} />
+                </div>
+                <div className="item-field">
+                  <label>On Sale?</label>
+                  <select value={item.data.onSale} onChange={e => updateField(item.id, 'onSale', e.target.value)}>
+                    <option value="">—</option>
+                    <option value="Y">Yes</option>
+                    <option value="N">No</option>
+                  </select>
+                </div>
+                <div className="item-field">
+                  <label>Date</label>
+                  <input type="date" value={item.data.date} onChange={e => updateField(item.id, 'date', e.target.value)} />
+                </div>
+                <div className="item-field full">
+                  <label>Notes</label>
+                  <input value={item.data.notes} onChange={e => updateField(item.id, 'notes', e.target.value)} />
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
