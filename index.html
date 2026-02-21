@@ -509,10 +509,11 @@ function App() {
     showToast("📸 Processing image...");
     
     try {
-      // Create thumbnail FIRST (for local storage)
-      const thumbnail = await createThumbnail(file);
+      // Create thumbnail for S3 upload
+      const thumbnailDataUrl = await createThumbnail(file);
+      const thumbnailBase64 = thumbnailDataUrl.split(',')[1]; // Extract base64 part
       
-      // Convert image to base64 for Claude
+      // Convert full image to base64 for Claude
       const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(',')[1]);
@@ -523,11 +524,11 @@ function App() {
       // Get file type
       const mediaType = file.type;
       
-      // Call Claude API via backend proxy
-      const extracted = await scanProductImage(base64, mediaType);
+      // Call Lambda - it will analyze image AND upload thumbnail to S3
+      const extracted = await scanProductImage(base64, thumbnailBase64, mediaType);
       
       if (extracted) {
-        // Auto-fill form with extracted data + thumbnail
+        // Auto-fill form with extracted data + S3 URL
         setForm(f => ({
           ...f,
           product: extracted.product || f.product,
@@ -538,7 +539,7 @@ function App() {
           onSale: extracted.sale ? "Y" : f.onSale,
           notes: extracted.notes || f.notes,
           date: f.date || TODAY(),
-          imageUrl: thumbnail  // Store thumbnail as data URL
+          imageUrl: extracted.imageUrl || null  // S3 URL from Lambda
         }));
         showToast("✅ Product scanned!");
       } else {
@@ -553,13 +554,14 @@ function App() {
     }
   };
 
-  const scanProductImage = async (base64Image, mediaType) => {
-    // Call your Lambda function to scan the image
+  const scanProductImage = async (base64Image, thumbnailBase64, mediaType) => {
+    // Call your Lambda function to scan the image and upload thumbnail
     const response = await fetch(LAMBDA_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        image: base64Image, 
+        image: base64Image,
+        thumbnail: thumbnailBase64,
         mediaType: mediaType 
       })
     });
@@ -1074,10 +1076,10 @@ function App() {
       {/* ── SYNC TAB ── */}
       {tab==="sync" && (
         <div className="page">
-          <div className="card" style={{background:"#eff6ff",borderColor:"#bfdbfe"}}>
-            <div className="section-title" style={{color:"#1e40af"}}>📸 Image Storage (Demo)</div>
-            <p style={{fontSize:14,color:"#1e40af",marginBottom:0,lineHeight:1.6}}>
-              Product images are stored locally in your browser (base64 in localStorage). They sync between devices but increase storage usage. For production, images should be uploaded to S3 instead.
+          <div className="card" style={{background:"#dcfce7",borderColor:"#86efac"}}>
+            <div className="section-title" style={{color:"#15803d"}}>📸 Image Storage (S3)</div>
+            <p style={{fontSize:14,color:"#15803d",marginBottom:0,lineHeight:1.6}}>
+              Product images are uploaded to your S3 bucket at <code style={{background:"#fff",padding:"2px 6px",borderRadius:4}}>s3://grocery-tracker/product-images/</code>. Only URLs are synced between devices. Storage cost: ~$0.02/month for 500 images.
             </p>
           </div>
           
