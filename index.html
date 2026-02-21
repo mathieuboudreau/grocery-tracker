@@ -344,6 +344,7 @@ function App() {
   const [searchQ,    setSearchQ]    = useState("");
   const [tagFilter,  setTagFilter]  = useState(null);
   const [analyticsTag,setAnalyticsTag]= useState(null);
+  const [analyticsCat,setAnalyticsCat]= useState(null);
   const [analyticsSearch,setAnalyticsSearch]= useState("");
   const [syncStatus,  setSyncStatus]  = useState("idle");
   const [lastSynced,  setLastSynced]  = useState(null);
@@ -629,7 +630,8 @@ function App() {
 
   /* ── Analytics: group by product → brand → store ── */
   const productAnalytics = useMemo(() => {
-    const active = entries.filter(e=>!e.deletedAt);
+    let active = entries.filter(e=>!e.deletedAt);
+    if (analyticsCat) active = active.filter(e=>(e.category||"").toLowerCase()===analyticsCat.toLowerCase());
     const base = analyticsTag ? active.filter(e=>(e.tags||[]).includes(analyticsTag)) : active;
     const products=[...new Set(base.map(e=>e.product).filter(Boolean))].sort();
     return products.map(p => {
@@ -691,7 +693,7 @@ function App() {
 
     return { product:p, count:pRows.length, avgPrice:avg(prices), minPrice:minSafe(prices), maxPrice:maxSafe(prices), avgPpkg:avg(ppkgAll), unitLabel, unitAvg, unitMin, unitMax, brandData };
     });
-  }, [entries, analyticsTag]);
+  }, [entries, analyticsTag, analyticsCat]);
 
   const filteredAnalytics = useMemo(() => {
     if (!analyticsSearch.trim()) return productAnalytics;
@@ -1213,19 +1215,14 @@ function App() {
                   {analyticsSearch&&<button className="search-clear" onClick={()=>{setAnalyticsSearch("");analyticsSearchRef.current?.focus();}}>×</button>}
                 </div>
 
-                <div className="stat-grid">
-                  {[
-                    ["Entries",   activeCount,                              "#2563eb"],
-                    ["Products",  allProducts.length,                       "#16a34a"],
-                    ["Brands",    allBrands.length,                         "#9333ea"],
-                    ["Stores",    allStores.length,                         "#ea580c"],
-                  ].map(([lbl,val,color])=>(
-                    <div key={lbl} className="stat-card" style={{borderTop:`3px solid ${color}`}}>
-                      <div className="stat-val" style={{color}}>{val}</div>
-                      <div className="stat-lbl">{lbl}</div>
-                    </div>
-                  ))}
-                </div>
+                {allCats.length>0&&(
+                  <div className="filter-bar">
+                    <button className={`filter-chip${!analyticsCat?" active":""}`} onClick={()=>setAnalyticsCat(null)}>All</button>
+                    {allCats.map(c=>(
+                      <button key={c} className={`filter-chip${analyticsCat===c?" active":""}`} onClick={()=>setAnalyticsCat(analyticsCat===c?null:c)}>{c}</button>
+                    ))}
+                  </div>
+                )}
 
                 {allTags.length>0&&(
                   <div className="card" style={{padding:"12px 14px"}}>
@@ -1242,7 +1239,7 @@ function App() {
                 )}
 
                 <div className="card">
-                  <div className="section-title">Price breakdown{analyticsTag?` — #${analyticsTag}`:""}{analyticsSearch?` — "${analyticsSearch}"`:""}</div>
+                  <div className="section-title">Price breakdown{analyticsCat?` — ${analyticsCat}`:""}{analyticsTag?` — #${analyticsTag}`:""}{analyticsSearch?` — "${analyticsSearch}"`:""}</div>
                   {filteredAnalytics.length===0
                     ? <div style={{color:"#64748b",fontSize:13}}>No entries match{analyticsSearch?" your search":""}.</div>
                     : filteredAnalytics.map(p=>(
