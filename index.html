@@ -360,14 +360,27 @@ function App() {
 
   useEffect(() => {
     try {
-      // Strip data URLs from localStorage (they're large); swap in S3 paths
+      // Strip presigned URLs and data URLs from localStorage; store s3:// paths only
       const toStore = entries.map(e => {
-        if (e.imageS3Path) {
-          const copy = {...e, imageUrl: e.imageS3Path};
+        const copy = {...e};
+        // If we have an explicit S3 path, use that
+        if (copy.imageS3Path) {
+          copy.imageUrl = copy.imageS3Path;
           delete copy.imageS3Path;
-          return copy;
         }
-        return e;
+        // If imageUrl is a presigned S3 URL, convert back to s3:// path
+        else if (copy.imageUrl && copy.imageUrl.includes('grocery-tracker.s3.')) {
+          try {
+            const url = new URL(copy.imageUrl);
+            const key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+            copy.imageUrl = `s3://grocery-tracker/${key}`;
+          } catch {}
+        }
+        // If it's a data URL, strip it (too large for localStorage)
+        else if (copy.imageUrl && copy.imageUrl.startsWith('data:')) {
+          copy.imageUrl = null;
+        }
+        return copy;
       });
       localStorage.setItem("gt_v3", JSON.stringify(toStore));
     } catch {}
@@ -390,8 +403,11 @@ function App() {
       const remote = data.entries||[];
       setEntries(prev => {
         const merged = mergeEntries(prev, remote);
-        pushCloud(merged, key);
-        return merged;
+        // Overlay fresh presigned URLs from remote (they expire, so always take the newest)
+        const urlMap = new Map(remote.filter(e=>e.imageUrl).map(e=>[e.id, e.imageUrl]));
+        const withFreshUrls = merged.map(e => urlMap.has(e.id) ? {...e, imageUrl: urlMap.get(e.id)} : e);
+        pushCloud(withFreshUrls, key);
+        return withFreshUrls;
       });
       setLastSynced(new Date()); setSyncStatus("synced");
     } catch { setSyncStatus("error"); showToast("⚠️ Sync failed — working offline"); }
@@ -402,10 +418,19 @@ function App() {
     const key = sk||secret; if (!key) return;
     setSyncStatus("syncing");
     try {
-      // For cloud storage, swap in S3 paths so GET handler can generate presigned URLs
+      // For cloud storage, convert all image URLs back to s3:// paths
       const cloudEntries = entriesToPush.map(e => {
         const copy = {...e};
+        // Explicit S3 path takes priority
         if (copy.imageS3Path) { copy.imageUrl = copy.imageS3Path; }
+        // Convert presigned URLs back to s3:// paths
+        else if (copy.imageUrl && copy.imageUrl.includes('grocery-tracker.s3.')) {
+          try {
+            const url = new URL(copy.imageUrl);
+            const k = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+            copy.imageUrl = `s3://grocery-tracker/${k}`;
+          } catch {}
+        }
         delete copy.imageS3Path;
         return copy;
       });
@@ -917,6 +942,7 @@ function App() {
                       <img 
                         src={e.imageUrl} 
                         alt={e.product}
+                        onError={(ev) => { ev.target.style.display='none'; ev.target.nextSibling && (ev.target.nextSibling.style.display='flex'); }}
                         style={{
                           width: 60,
                           height: 60,
@@ -927,6 +953,15 @@ function App() {
                           border: '1px solid #e2e8f0'
                         }}
                       />
+                    )}
+                    {e.imageUrl && !e.imageUrl.startsWith('s3://') && (
+                      <div style={{
+                        display: 'none',
+                        width: 60, height: 60, borderRadius: 8, marginRight: 12, flexShrink: 0,
+                        background: '#fee2e2', border: '1px solid #fca5a5',
+                        alignItems: 'center', justifyContent: 'center',
+                        fontSize: 11, color: '#dc2626', fontWeight: 700, textAlign: 'center', lineHeight: 1.2
+                      }}>IMG<br/>FAIL</div>
                     )}
                     <div style={{minWidth:0,flex:1}}>
                       <div className="entry-product">{e.product}</div>
@@ -1251,7 +1286,7 @@ function App() {
                     : filteredAnalytics.map(p=>(
                     <div key={p.product} className="product-row">
                       <div className="product-name" style={{display:"flex",alignItems:"center",gap:10}}>
-                        {p.image && <img src={p.image} alt={p.product} style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"1px solid #e2e8f0",flexShrink:0}} />}
+                        {p.image && <img src={p.image} alt={p.product} onError={(ev)=>{ev.target.style.display='none';}} style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"1px solid #e2e8f0",flexShrink:0}} />}
                         <span>{p.product} <span style={{fontWeight:400,color:"#64748b",fontSize:12}}>({p.count} record{p.count!==1?"s":""})</span></span>
                       </div>
 
