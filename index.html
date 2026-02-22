@@ -343,7 +343,6 @@ function App() {
   const [storeFilter,setStoreFilter]= useState("all");
   const [searchQ,    setSearchQ]    = useState("");
   const [tagFilter,  setTagFilter]  = useState(null);
-  const [analyticsTag,setAnalyticsTag]= useState(null);
   const [analyticsCat,setAnalyticsCat]= useState(null);
   const [analyticsSearch,setAnalyticsSearch]= useState("");
   const [syncStatus,  setSyncStatus]  = useState("idle");
@@ -659,7 +658,7 @@ function App() {
   const productAnalytics = useMemo(() => {
     let active = entries.filter(e=>!e.deletedAt);
     if (analyticsCat) active = active.filter(e=>(e.category||"").toLowerCase()===analyticsCat.toLowerCase());
-    const base = analyticsTag ? active.filter(e=>(e.tags||[]).includes(analyticsTag)) : active;
+    const base = active;
     const products=[...new Set(base.map(e=>e.product).filter(Boolean))].sort();
     return products.map(p => {
     const pRows = base.filter(e=>e.product===p);
@@ -721,16 +720,19 @@ function App() {
     const imageEntry = pRows.find(e => e.imageUrl && !e.imageUrl.startsWith('s3://'));
     const image = imageEntry ? imageEntry.imageUrl : null;
 
-    return { product:p, image, count:pRows.length, avgPrice:avg(prices), minPrice:minSafe(prices), maxPrice:maxSafe(prices), avgPpkg:avg(ppkgAll), unitLabel, unitAvg, unitMin, unitMax, brandData };
+    const allProductTags = [...new Set(pRows.flatMap(e=>e.tags||[]))].sort();
+
+    return { product:p, image, tags:allProductTags, count:pRows.length, avgPrice:avg(prices), minPrice:minSafe(prices), maxPrice:maxSafe(prices), avgPpkg:avg(ppkgAll), unitLabel, unitAvg, unitMin, unitMax, brandData };
     });
-  }, [entries, analyticsTag, analyticsCat]);
+  }, [entries, analyticsCat]);
 
   const filteredAnalytics = useMemo(() => {
     if (!analyticsSearch.trim()) return productAnalytics;
     const q = analyticsSearch.toLowerCase();
     return productAnalytics.filter(p =>
       p.product.toLowerCase().includes(q) ||
-      p.brandData.some(b => b.brand.toLowerCase().includes(q))
+      p.brandData.some(b => b.brand.toLowerCase().includes(q)) ||
+      p.tags.some(t => t.toLowerCase().includes(q))
     );
   }, [productAnalytics, analyticsSearch]);
 
@@ -1252,7 +1254,7 @@ function App() {
                   <span className="search-icon">🔍</span>
                   <input ref={analyticsSearchRef} value={analyticsSearch}
                     onChange={e=>setAnalyticsSearch(e.target.value)}
-                    placeholder="Search product or brand…" />
+                    placeholder="Search product, brand, or tag…" />
                   {analyticsSearch&&<button className="search-clear" onClick={()=>{setAnalyticsSearch("");analyticsSearchRef.current?.focus();}}>×</button>}
                 </div>
 
@@ -1265,22 +1267,8 @@ function App() {
                   </div>
                 )}
 
-                {allTags.length>0&&(
-                  <div className="card" style={{padding:"12px 14px"}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>Filter by tag</div>
-                    <div className="analytics-tag-bar">
-                      <button className={`analytics-tag-chip${!analyticsTag?" active":""}`} onClick={()=>setAnalyticsTag(null)}>All</button>
-                      {allTags.map(({tag,count})=>(
-                        <button key={tag} className={`analytics-tag-chip${analyticsTag===tag?" active":""}`} onClick={()=>setAnalyticsTag(analyticsTag===tag?null:tag)}>
-                          #{tag} <span style={{opacity:0.5,marginLeft:3}}>{count}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 <div className="card">
-                  <div className="section-title">Price breakdown{analyticsCat?` — ${analyticsCat}`:""}{analyticsTag?` — #${analyticsTag}`:""}{analyticsSearch?` — "${analyticsSearch}"`:""}</div>
+                  <div className="section-title">Price breakdown{analyticsCat?` — ${analyticsCat}`:""}{analyticsSearch?` — "${analyticsSearch}"`:""}</div>
                   {filteredAnalytics.length===0
                     ? <div style={{color:"#64748b",fontSize:13}}>No entries match{analyticsSearch?" your search":""}.</div>
                     : filteredAnalytics.map(p=>(
