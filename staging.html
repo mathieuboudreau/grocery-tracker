@@ -372,6 +372,7 @@ function App() {
   const [shopSelected, setShopSelected] = useState(new Set());
   const [shopPinned, setShopPinned] = useState({});  // { product: store }
   const [shopMaxStores, setShopMaxStores] = useState(0);  // 0 = unlimited
+  const [shopListOpen, setShopListOpen] = useState(true);
   const [syncStatus,  setSyncStatus]  = useState("idle");
   const [lastSynced,  setLastSynced]  = useState(null);
   const [toast,      setToast]      = useState(null);
@@ -1490,22 +1491,15 @@ function App() {
           {shopProducts.productSet.length === 0
             ? <div className="empty"><div className="empty-icon">🛍️</div><div className="empty-text">Add some products first.</div></div>
             : <>
-                <div className="card">
-                  <div className="section-title">Shopping List</div>
-                  <p style={{fontSize:13,color:"#94a3b8",marginBottom:12,lineHeight:1.5}}>
-                    Tap a product to add it. Long-press to pin it to a specific store.
-                  </p>
-
-                  {/* Controls row */}
-                  <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+                {/* Controls */}
+                <div className="card" style={{paddingBottom:12}}>
+                  <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}>
                     <button className="btn btn-sm btn-secondary" onClick={selectAllShop}>Select all</button>
                     <button className="btn btn-sm btn-secondary" onClick={clearAllShop}>Clear</button>
                     <div style={{flex:1}}/>
-                    <span style={{fontSize:13,fontWeight:700,color:"#2563eb"}}>{shopSelected.size} selected</span>
+                    <span style={{fontSize:13,fontWeight:700,color:"#2563eb"}}>{shopSelected.size} item{shopSelected.size!==1?"s":""}</span>
                   </div>
-
-                  {/* Max stores constraint */}
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,padding:"10px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
                     <span style={{fontSize:13,fontWeight:600,color:"#475569"}}>Max stores:</span>
                     {[0,1,2,3].map(n=>(
                       <button key={n} onClick={()=>setShopMaxStores(n)}
@@ -1515,49 +1509,6 @@ function App() {
                       </button>
                     ))}
                   </div>
-
-                  {/* Product list */}
-                  {Object.entries(shopProducts.byCat).sort(([a],[b])=>a.localeCompare(b)).map(([cat, products])=>(
-                    <div key={cat}>
-                      <div className="shop-cat-header">{cat}</div>
-                      {products.map(p => {
-                        const on = shopSelected.has(p);
-                        const rows = entries.filter(e=>!e.deletedAt&&e.product===p);
-                        const stores = [...new Set(rows.map(e=>e.store).filter(Boolean))];
-                        const pin = shopPinned[p];
-                        return (
-                          <div key={p} style={{display:"flex",alignItems:"center",gap:0}}>
-                            <div className="shop-item" style={{flex:1}} onClick={()=>toggleShopItem(p)}>
-                              <div className={`shop-cb${on?" on":""}`}>{on?"✓":""}</div>
-                              <div style={{flex:1}}>
-                                <div className="shop-item-name">
-                                  {p}
-                                  {pin && <span style={{fontSize:11,fontWeight:700,color:"#d97706",marginLeft:6}}>📌 {pin}</span>}
-                                </div>
-                                <div className="shop-item-sub">{stores.join(", ")} · {rows.length} record{rows.length!==1?"s":""}</div>
-                              </div>
-                            </div>
-                            {on && stores.length > 0 && (
-                              <div style={{display:"flex",gap:3,paddingRight:4,flexShrink:0}}>
-                                {stores.map(s=>{
-                                  const isPinned = pin === s;
-                                  return (
-                                    <button key={s} onClick={(e)=>{e.stopPropagation();togglePin(p,s);}}
-                                      title={isPinned ? `Unpin from ${s}` : `Pin to ${s}`}
-                                      style={{border:isPinned?"1.5px solid #d97706":"1.5px solid #e2e8f0",background:isPinned?"#fef3c7":"#fff",
-                                        color:isPinned?"#d97706":"#94a3b8",borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,
-                                        cursor:"pointer",fontFamily:"inherit",lineHeight:1.2}}>
-                                      {s.slice(0,3)}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
                 </div>
 
                 {/* Error state */}
@@ -1568,10 +1519,9 @@ function App() {
                   </div>
                 )}
 
-                {/* Results */}
+                {/* Results — shown immediately when items selected */}
                 {shopResults && !shopResults.error && shopResults.items.length > 0 && (
                   <>
-                    {/* Summary cards */}
                     <div className="shop-summary">
                       <div className="shop-summary-card">
                         <div className="shop-summary-val" style={{color:"#16a34a"}}>{fmt$(shopResults.optimalTotal)}</div>
@@ -1583,18 +1533,16 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Missing items warning */}
                     {shopResults.missing && shopResults.missing.length > 0 && (
                       <div className="card" style={{background:"#fffbeb",borderColor:"#fde68a",marginBottom:12}}>
-                        <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:2}}>⚠️ {shopResults.missing.length} item{shopResults.missing.length!==1?"s":""} not available at selected stores</div>
+                        <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:2}}>⚠️ {shopResults.missing.length} item{shopResults.missing.length!==1?"s":""} unavailable at selected stores</div>
                         <div style={{fontSize:12,color:"#92400e"}}>{shopResults.missing.join(", ")}</div>
                       </div>
                     )}
 
-                    {/* Per-store breakdown */}
                     {shopResults.storeSet.filter(s=>shopResults.byStore[s]?.length>0).map(store=>{
-                      const items = shopResults.byStore[store];
-                      const storeTotal = items.reduce((s,i)=>s+(i.bestTotal||0),0);
+                      const storeItems = shopResults.byStore[store];
+                      const storeTotal = storeItems.reduce((s,i)=>s+(i.bestTotal||0),0);
                       const colors = {Walmart:"#2563eb",Superstore:"#dc2626",IGA:"#d97706"};
                       const bgColors = {Walmart:"#dbeafe",Superstore:"#fee2e2",IGA:"#fef3c7"};
                       return (
@@ -1602,11 +1550,11 @@ function App() {
                           <div className="shop-store-header">
                             <span className="shop-store-name" style={{color:colors[store]||"#0f172a"}}>{store}</span>
                             <span className="shop-store-badge" style={{background:bgColors[store]||"#f1f5f9",color:colors[store]||"#475569"}}>
-                              {items.length} item{items.length!==1?"s":""}
+                              {storeItems.length} item{storeItems.length!==1?"s":""}
                             </span>
                             <span style={{marginLeft:"auto",fontSize:16,fontWeight:800,color:colors[store]||"#0f172a"}}>~{fmt$(storeTotal)}</span>
                           </div>
-                          {items.sort((a,b)=>a.product.localeCompare(b.product)).map(item=>(
+                          {storeItems.sort((a,b)=>a.product.localeCompare(b.product)).map(item=>(
                             <div key={item.product} className="shop-result-item">
                               <div>
                                 <div className="shop-result-name">
@@ -1618,9 +1566,7 @@ function App() {
                                     cheapest{item.bestInfo?.type==="kg" ? " by weight" : ""} vs {Object.keys(item.storeAvgs).filter(s=>s!==store).join(", ")}
                                   </div>
                                 )}
-                                {item.pinned && (
-                                  <div className="shop-result-note">pinned to this store</div>
-                                )}
+                                {item.pinned && <div className="shop-result-note">pinned to this store</div>}
                               </div>
                               <div className="shop-result-price" style={{color:colors[store]||"#0f172a"}}>
                                 ~{fmt$(item.bestTotal)}
@@ -1631,12 +1577,8 @@ function App() {
                       );
                     })}
 
-                    {/* Single-store comparison */}
                     <div className="card">
                       <div className="section-title">What if one store only?</div>
-                      <p style={{fontSize:13,color:"#94a3b8",marginBottom:10,lineHeight:1.5}}>
-                        Estimated cost if you bought everything at a single store (items they carry):
-                      </p>
                       {shopResults.storeSet.filter(s=>shopResults.singleStore[s]).sort((a,b)=>(shopResults.singleStore[a]?.total||999)-(shopResults.singleStore[b]?.total||999)).map(store=>{
                         const ss = shopResults.singleStore[store];
                         const isOptimal = ss.overpayPct <= 0;
@@ -1661,6 +1603,64 @@ function App() {
                     </div>
                   </>
                 )}
+
+                {/* Collapsible product picker */}
+                <div className="card">
+                  <div onClick={()=>setShopListOpen(!shopListOpen)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:shopListOpen?10:0}}>
+                    <div className="section-title" style={{marginBottom:0}}>
+                      {shopListOpen ? "▼" : "▶"} Select Products
+                    </div>
+                    <span style={{fontSize:12,color:"#94a3b8"}}>{shopSelected.size}/{shopProducts.productSet.length}</span>
+                  </div>
+                  {shopListOpen && (
+                    <>
+                      <p style={{fontSize:13,color:"#94a3b8",marginBottom:10,lineHeight:1.5}}>
+                        Tap to select. Use the store buttons to pin an item to a specific store.
+                      </p>
+                      {Object.entries(shopProducts.byCat).sort(([a],[b])=>a.localeCompare(b)).map(([cat, products])=>(
+                        <div key={cat}>
+                          <div className="shop-cat-header">{cat}</div>
+                          {products.map(p => {
+                            const on = shopSelected.has(p);
+                            const rows = entries.filter(e=>!e.deletedAt&&e.product===p);
+                            const stores = [...new Set(rows.map(e=>e.store).filter(Boolean))];
+                            const pin = shopPinned[p];
+                            return (
+                              <div key={p} style={{display:"flex",alignItems:"center",gap:0}}>
+                                <div className="shop-item" style={{flex:1}} onClick={()=>toggleShopItem(p)}>
+                                  <div className={`shop-cb${on?" on":""}`}>{on?"✓":""}</div>
+                                  <div style={{flex:1}}>
+                                    <div className="shop-item-name">
+                                      {p}
+                                      {pin && <span style={{fontSize:11,fontWeight:700,color:"#d97706",marginLeft:6}}>📌 {pin}</span>}
+                                    </div>
+                                    <div className="shop-item-sub">{stores.join(", ")} · {rows.length} record{rows.length!==1?"s":""}</div>
+                                  </div>
+                                </div>
+                                {on && stores.length > 0 && (
+                                  <div style={{display:"flex",gap:3,paddingRight:4,flexShrink:0}}>
+                                    {stores.map(s=>{
+                                      const isPinned = pin === s;
+                                      return (
+                                        <button key={s} onClick={(e)=>{e.stopPropagation();togglePin(p,s);}}
+                                          title={isPinned ? `Unpin from ${s}` : `Pin to ${s}`}
+                                          style={{border:isPinned?"1.5px solid #d97706":"1.5px solid #e2e8f0",background:isPinned?"#fef3c7":"#fff",
+                                            color:isPinned?"#d97706":"#94a3b8",borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,
+                                            cursor:"pointer",fontFamily:"inherit",lineHeight:1.2}}>
+                                          {s.slice(0,3)}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
               </>
           }
         </div>
