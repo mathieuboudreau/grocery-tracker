@@ -720,7 +720,19 @@ function App() {
       const storeUnitAvgs = Object.entries(byStoreUnit).map(([s,ps])=>({store:s,avg:avg(ps)})).sort((a,b)=>a.avg-b.avg);
       const maxUnitAvg = storeUnitAvgs.length ? storeUnitAvgs.at(-1).avg : 1;
 
-      return { brand:b, count:bRows.length, avgPrice:avg(bPrices), minPrice:minSafe(bPrices), maxPrice:maxSafe(bPrices), avgPpkg:avg(ppkg), bUnitAvg, bUnitMin, bUnitMax, storeAvgs, maxAvg, storeUnitAvgs, maxUnitAvg };
+      // If per-unit data is available, re-sort storeAvgs by per-unit price for correct ordering
+      let sortedStoreAvgs = storeAvgs;
+      if (storeUnitAvgs.length >= storeAvgs.length) {
+        // Sort stores by per-weight price instead of total price
+        const unitOrder = Object.fromEntries(storeUnitAvgs.map((s,i) => [s.store, i]));
+        sortedStoreAvgs = [...storeAvgs].sort((a,b) => {
+          const aIdx = unitOrder[a.store] ?? 999;
+          const bIdx = unitOrder[b.store] ?? 999;
+          return aIdx - bIdx;
+        });
+      }
+
+      return { brand:b, count:bRows.length, avgPrice:avg(bPrices), minPrice:minSafe(bPrices), maxPrice:maxSafe(bPrices), avgPpkg:avg(ppkg), bUnitAvg, bUnitMin, bUnitMax, storeAvgs: sortedStoreAvgs, maxAvg, storeUnitAvgs, maxUnitAvg, hasUnitData: storeUnitAvgs.length >= storeAvgs.length };
     });
 
     const imageEntry = pRows.find(e => e.imageUrl && !e.imageUrl.startsWith('s3://'));
@@ -1328,6 +1340,9 @@ function App() {
                             <div className="store-bars">
                               {b.storeAvgs.map((sv,i)=>{
                                 const unitAvg = b.storeUnitAvgs?.find(su=>su.store===sv.store);
+                                const useUnit = b.hasUnitData && unitAvg;
+                                const barValue = useUnit ? unitAvg.avg : sv.avg;
+                                const barMax = useUnit ? b.maxUnitAvg : b.maxAvg;
                                 return (
                                 <div key={sv.store} className="store-bar">
                                   <div className="store-name" style={{color:i===0?"#15803d":i===b.storeAvgs.length-1&&i>0?"#b91c1c":"#475569"}}>
@@ -1335,13 +1350,15 @@ function App() {
                                   </div>
                                   <div className="bar-track">
                                     <div className="bar-fill" style={{
-                                      width:`${(sv.avg/b.maxAvg*100).toFixed(1)}%`,
+                                      width:`${(barValue/barMax*100).toFixed(1)}%`,
                                       background: i===0?"#16a34a":i===b.storeAvgs.length-1&&i>0?"#dc2626":"#3b82f6"
                                     }}/>
                                   </div>
                                   <div className="store-price" style={{color:i===0?"#15803d":i===b.storeAvgs.length-1&&i>0?"#b91c1c":"#0f172a"}}>
-                                    {fmt$(sv.avg)}
-                                    {unitAvg && p.unitLabel && <div style={{fontSize:10,color:"#64748b",fontWeight:400}}>{fmt$3(unitAvg.avg)}/{p.unitLabel.replace("$/","")}</div>}
+                                    {useUnit
+                                      ? <>{fmt$3(unitAvg.avg)}/{p.unitLabel.replace("$/","")}<div style={{fontSize:10,color:"#64748b",fontWeight:400}}>avg {fmt$(sv.avg)}</div></>
+                                      : <>{fmt$(sv.avg)}{unitAvg && p.unitLabel && <div style={{fontSize:10,color:"#64748b",fontWeight:400}}>{fmt$3(unitAvg.avg)}/{p.unitLabel.replace("$/","")}</div>}</>
+                                    }
                                   </div>
                                 </div>
                               );})}
