@@ -254,6 +254,10 @@ function App() {
     abortRef.current = false;
     setScanProgress({ done: 0, total: pending.length });
 
+    // Track product names discovered during this batch
+    const batchScannedNames = [];
+    const batchScannedCategories = [];
+
     for (let idx = 0; idx < pending.length; idx++) {
       if (abortRef.current) break;
       const item = pending[idx];
@@ -262,13 +266,28 @@ function App() {
       try {
         const base64 = await fileToBase64(item.file);
         const thumbBase64 = item.thumbUrl.split(',')[1];
+        // Send existing product names so Claude can match against them
+        // Include cloud entries + names discovered so far in this batch
+        const cloudNames = cloudEntries.filter(e => !e.deletedAt && e.product).map(e => e.product);
+        const existingProducts = [...new Set([...cloudNames, ...batchScannedNames])];
+        // Collect existing tags for reuse
+        const tagSet = new Set();
+        cloudEntries.filter(e => !e.deletedAt).forEach(e => (e.tags || []).forEach(t => tagSet.add(t)));
+        const existingTags = [...tagSet];
+        // Collect existing categories for reuse
+        const cloudCategories = [...new Set(cloudEntries.filter(e => !e.deletedAt && e.category).map(e => e.category))];
+        const existingCategories = [...new Set([...cloudCategories, ...batchScannedCategories])];
         const res = await fetch(LAMBDA_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64, thumbnail: thumbBase64, mediaType: item.file.type })
+          body: JSON.stringify({ image: base64, thumbnail: thumbBase64, mediaType: item.file.type, existingProducts, existingCategories, existingTags })
         });
         if (!res.ok) throw new Error(`Scan failed (${res.status})`);
         const extracted = await res.json();
+
+        // Track this product name and category for subsequent scans in the batch
+        if (extracted.product) batchScannedNames.push(extracted.product);
+        if (extracted.category) batchScannedCategories.push(extracted.category);
 
         setItems(prev => prev.map(i => i.id === item.id ? {
           ...i,
@@ -282,8 +301,9 @@ function App() {
             unit: extracted.unit || '',
             onSale: extracted.sale ? 'Y' : '',
             notes: extracted.notes || '',
+            tags: Array.isArray(extracted.tags) ? extracted.tags : [],
             store: i.data.store || defaultStore,
-            category: i.data.category || defaultCategory,
+            category: extracted.category || i.data.category || defaultCategory,
             imageUrl: item.thumbUrl,
             imageS3Path: extracted.imageUrl || null
           }
