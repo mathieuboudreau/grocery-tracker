@@ -591,11 +591,13 @@ function App() {
           ...f,
           product: extracted.product || f.product,
           brand: extracted.brand || f.brand,
+          category: extracted.category || f.category,
           totalPrice: extracted.price != null ? extracted.price.toString() : f.totalPrice,
           weight: extracted.size != null ? extracted.size.toString() : f.weight,
           unit: extracted.unit || f.unit,
           onSale: extracted.sale ? "Y" : f.onSale,
           notes: extracted.notes || f.notes,
+          tags: Array.isArray(extracted.tags) && extracted.tags.length ? extracted.tags : (f.tags || []),
           date: f.date || TODAY(),
           imageUrl: thumbnailDataUrl || null,    // Local thumbnail for immediate display
           imageS3Path: extracted.imageUrl || null // S3 path for cloud storage
@@ -615,13 +617,17 @@ function App() {
 
   const scanProductImage = async (base64Image, thumbnailBase64, mediaType) => {
     // Call your Lambda function to scan the image and upload thumbnail
+    // Send existing product names so Claude can match against them
     const response = await fetch(LAMBDA_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         image: base64Image,
         thumbnail: thumbnailBase64,
-        mediaType: mediaType 
+        mediaType: mediaType,
+        existingProducts: allProducts,
+        existingCategories: allCats,
+        existingTags: allTags.map(t => t.tag)
       })
     });
     
