@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>🛒 Grocery Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #f8fafc; }
+  body { font-family: 'DM Sans', sans-serif; color: #0f172a; -webkit-tap-highlight-color: transparent; }
+  #root { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 16px 0;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+  .logo  { font-size: 20px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
+  .stats { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+
+  /* Sync status pill */
+  .sync-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; cursor: default; }
+  .sync-pill.synced  { background: #dcfce7; color: #16a34a; }
+  .sync-pill.syncing { background: #dbeafe; color: #1d4ed8; }
+  .sync-pill.error   { background: #fee2e2; color: #dc2626; }
+  .sync-pill.idle    { background: #f1f5f9; color: #64748b; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+
+  /* Setup screen */
+  .setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 32px 24px; text-align: center; }
+  .setup-icon  { font-size: 56px; margin-bottom: 20px; }
+  .setup-title { font-size: 22px; font-weight: 800; color: #2563eb; margin-bottom: 8px; }
+  .setup-desc  { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 28px; max-width: 320px; }
+  .setup-input { width: 100%; max-width: 320px; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; color: #0f172a; font-size: 16px; font-family: inherit; margin-bottom: 12px; outline: none; }
+  .setup-input:focus { border-color: #3b82f6; }
+
+  .nav { display: flex; border-top: 1px solid #e2e8f0; }
+  .nav-btn {
+    flex: 1; border: none; background: transparent; padding: 10px 4px 12px;
+    cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: #94a3b8; font-family: inherit; transition: color 0.15s;
+  }
+  .nav-btn.active { color: #2563eb; border-bottom: 2px solid #2563eb; }
+  .nav-btn .nav-icon  { font-size: 20px; line-height: 1; }
+  .nav-btn .nav-label { font-size: 11px; font-weight: 600; }
+
+  .page { flex: 1; padding: 16px; max-width: 680px; margin: 0 auto; width: 100%; }
+
+  .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+  .field { margin-bottom: 14px; }
+  .field-row { display: grid; gap: 12px; margin-bottom: 14px; }
+  .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .field-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  label.lbl { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+
+  input, select {
+    width: 100%; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 12px 14px; color: #0f172a; font-size: 16px;
+    font-family: inherit; appearance: none; -webkit-appearance: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { outline: none; border-color: #3b82f6; }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+  }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; border-radius: 12px; padding: 14px 20px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.15s; width: 100%; margin-bottom: 8px; }
+  .btn:active { opacity: 0.75; }
+  .btn-primary   { background: #2563eb; color: #fff; }
+  .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+  .btn-danger    { background: #fee2e2; color: #dc2626; }
+  .btn-success   { background: #dcfce7; color: #16a34a; }
+  .btn-warning   { background: #fef3c7; color: #d97706; }
+  .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; margin-bottom: 0; border-radius: 8px; }
+
+  .calc-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 12px; }
+  .calc-lbl { font-size: 10px; color: #475569; font-weight: 700; text-transform: uppercase; }
+  .calc-val { font-size: 16px; font-weight: 800; color: #16a34a; }
+
+  .entry-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  .entry-top  { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .entry-product { font-size: 16px; font-weight: 700; color: #1e40af; }
+  .entry-brand   { font-size: 13px; font-weight: 600; color: #3b82f6; opacity: 0.8; margin-top: 1px; }
+  .entry-meta    { font-size: 12px; color: #64748b; margin-top: 3px; }
+  .entry-actions { display: flex; gap: 6px; flex-shrink: 0; margin-left: 8px; }
+
+  .entry-prices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .price-pill { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 10px; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .price-pill .plbl { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; }
+  .price-pill .pval { font-weight: 700; color: #0f172a; }
+  .price-pill.main .pval { color: #2563eb; font-size: 15px; }
+  .sale-badge { display: inline-block; background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+
+  /* Search bar */
+  .search-wrap { position: relative; margin-bottom: 12px; }
+  .search-wrap input { padding-left: 40px; }
+  .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
+  .search-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; font-size: 18px; cursor: pointer; padding: 0; line-height: 1; width: auto; margin: 0; }
+
+  /* Tags input */
+  .tag-input-wrap { background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 6px; cursor: text; transition: border-color 0.15s; }
+  .tag-input-wrap:focus-within { border-color: #3b82f6; }
+  .tag-chip { display: inline-flex; align-items: center; gap: 4px; background: #dbeafe; color: #1e40af; border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 600; }
+  .tag-chip button { background: none; border: none; color: #64748b; cursor: pointer; font-size: 15px; line-height: 1; padding: 0; width: auto; margin: 0; display: flex; align-items: center; }
+  .tag-chip button:hover { color: #dc2626; }
+  .tag-input { background: none; border: none; outline: none; color: #0f172a; font-size: 15px; font-family: inherit; padding: 4px; min-width: 80px; flex: 1; width: auto; }
+  .tag-suggestions { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; margin-top: 4px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+  .tag-suggestion { padding: 10px 14px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .tag-suggestion:hover, .tag-suggestion.focused { background: #f8fafc; }
+  .tag-suggestion-count { font-size: 11px; color: #64748b; margin-left: auto; }
+
+  /* Entry card tags */
+  .entry-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .entry-tag { background: #dbeafe; color: #1e40af; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .entry-tag:hover { background: #bfdbfe; }
+
+  .tag-filter-banner { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+  .tag-filter-banner span { color: #1e40af; }
+  .tag-filter-banner button { background: none; border: none; color: #64748b; font-size: 18px; cursor: pointer; padding: 0; width: auto; margin: 0; line-height: 1; }
+
+  .analytics-tag-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .analytics-tag-chip { background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; font-family: inherit; }
+  .analytics-tag-chip.active { border-color: #3b82f6; color: #2563eb; background: #eff6ff; }
+
+  .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .filter-chip { flex-shrink: 0; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .filter-chip.active { border-color: #3b82f6; color: #2563eb; background: #eff6ff; }
+
+  .sort-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .sort-row label { font-size: 12px; color: #64748b; white-space: nowrap; }
+  .sort-row select { font-size: 13px; padding: 7px 30px 7px 10px; border-radius: 8px; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .stat-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; text-align: center; }
+  .stat-val  { font-size: 32px; font-weight: 800; line-height: 1; }
+  .stat-lbl  { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+  .section-title { font-size: 14px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+
+  .product-row { border-bottom: 1px solid #e2e8f0; padding: 14px 0; }
+  .product-row:last-child { border-bottom: none; }
+  .product-name { font-size: 15px; font-weight: 700; color: #1e40af; margin-bottom: 4px; }
+
+  /* Brand sub-rows within a product */
+  .brand-block { margin-top: 10px; padding: 10px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; }
+  .brand-title { font-size: 12px; font-weight: 700; color: #3b82f6; margin-bottom: 6px; }
+
+  .store-bars { display: flex; flex-direction: column; gap: 6px; }
+  .store-bar  { display: flex; align-items: center; gap: 10px; }
+  .store-name { font-size: 13px; color: #475569; width: 100px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track  { flex: 1; background: #e2e8f0; border-radius: 999px; height: 8px; overflow: hidden; }
+  .bar-fill   { height: 100%; border-radius: 999px; }
+  .store-price { font-size: 13px; font-weight: 700; width: 75px; text-align: right; }
+
+  .empty { text-align: center; padding: 48px 16px; color: #94a3b8; }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-text { font-size: 15px; }
+
+  /* Share / sync section */
+  .sync-section { margin-bottom: 12px; }
+  .sync-row { display: flex; gap: 8px; }
+  .sync-row .btn { margin-bottom: 0; }
+  .sync-note { font-size: 12px; color: #64748b; margin-top: 8px; line-height: 1.5; }
+
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #ffffff; padding: 10px 20px; border-radius: 999px;
+    font-size: 14px; font-weight: 600; z-index: 999; white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    animation: fadeInOut 2.5s ease forwards;
+  }
+  @keyframes fadeInOut { 0%{opacity:0;transform:translateX(-50%) translateY(10px)} 15%{opacity:1;transform:translateX(-50%) translateY(0)} 75%{opacity:1} 100%{opacity:0} }
+
+  @media (min-width: 480px) {
+    .stat-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  /* Shopping list */
+  .shop-cat-header { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
+  .shop-cat-header:first-child { margin-top: 0; }
+  .shop-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; -webkit-user-select: none; user-select: none; }
+  .shop-item:active { opacity: 0.7; }
+  .shop-cb { width: 22px; height: 22px; border: 2px solid #cbd5e1; border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; transition: all 0.15s; }
+  .shop-cb.on { background: #2563eb; border-color: #2563eb; }
+  .shop-item-name { font-size: 15px; font-weight: 600; color: #0f172a; }
+  .shop-item-sub { font-size: 12px; color: #94a3b8; }
+  .shop-results-store { margin-bottom: 16px; }
+  .shop-store-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .shop-store-name { font-size: 16px; font-weight: 800; }
+  .shop-store-badge { font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+  .shop-result-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+  .shop-result-item:last-child { border-bottom: none; }
+  .shop-result-name { color: #0f172a; font-weight: 600; }
+  .shop-result-price { font-weight: 700; }
+  .shop-result-note { font-size: 11px; color: #94a3b8; }
+  .shop-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .shop-summary-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; text-align: center; }
+  .shop-summary-val { font-size: 24px; font-weight: 800; line-height: 1.2; }
+  .shop-summary-lbl { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .shop-single-store { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+/* ── Helpers ── */
+function deriveRow(row) {
+  const tp = parseFloat(row.totalPrice), u = parseInt(row.units);
+  const w  = parseFloat(row.weight),    rp = parseFloat(row.regPrice);
+  let pricePerUnit=null, pricePerKg=null, pricePer100g=null, saving=null;
+  if (!isNaN(tp)) {
+    if (!isNaN(u) && u > 0) pricePerUnit = +(tp/u).toFixed(3);
+    if (!isNaN(w) && w > 0 && row.unit) {
+      const ul = (row.unit||"").toLowerCase();
+      const g = ul==="g"||ul==="ml"?w : ul==="kg"||ul==="l"?w*1000 : ul==="oz"?w*28.3495 : ul==="lb"?w*453.592 : null;
+      if (g) { pricePerKg=+(tp/g*1000).toFixed(3); pricePer100g=+(tp/g*100).toFixed(3); }
+    }
+    if (!isNaN(rp) && rp > 0) saving = +(rp-tp).toFixed(2);
+  }
+  return { ...row, pricePerUnit, pricePerKg, pricePer100g, saving };
+}
+
+const fmt$   = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : null;
+const fmt$3  = v  => v!=null && !isNaN(v) ? `$${Number(v).toFixed(2)}` : null;
+const uid    = () => Date.now().toString(36)+Math.random().toString(36).slice(2);
+const TODAY  = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+const avg    = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+const minSafe = arr => arr.length ? Math.min(...arr) : null;
+const maxSafe = arr => arr.length ? Math.max(...arr) : null;
+
+/* Determine the best display unit for a set of entries and convert $/kg values */
+function bestUnitLabel(rows) {
+  const unitCounts = {};
+  rows.forEach(r => { if (r.unit) { const u = (r.unit||"").toLowerCase(); unitCounts[u] = (unitCounts[u]||0)+1; } });
+  const sorted = Object.entries(unitCounts).sort((a,b)=>b[1]-a[1]);
+  if (!sorted.length) return null;
+  const top = sorted[0][0];
+  // Map unit → { label for display, multiplier to convert $/kg → $/display }
+  const map = {
+    "g":  { label:"$/100g", mult: 1/10 },
+    "kg": { label:"$/kg",   mult: 1 },
+    "ml": { label:"$/100mL",mult: 1/10 },
+    "l":  { label:"$/L",    mult: 1 },
+    "oz": { label:"$/oz",   mult: 0.0283495 },
+    "lb": { label:"$/lb",   mult: 0.453592 },
+  };
+  return map[top] || map["g"];
+}
+const EMPTY  = { product:"",brand:"",category:"",store:"",onSale:"",units:"",weight:"",unit:"",totalPrice:"",regPrice:"",notes:"",tags:[] };
+
+const LAMBDA_URL = "https://3jdo4h6d3mmemlnpte734n3wny0shxzn.lambda-url.ca-central-1.on.aws/";
+
+function mergeEntries(local, incoming) {
+  const map = new Map(local.map(e => [e.id, e]));
+  incoming.forEach(row => {
+    const incomingTs = row.updatedAt || "0";
+    const existing   = map.get(row.id);
+    const existingTs = existing?.updatedAt || "0";
+    if (!existing || incomingTs > existingTs) {
+      map.set(row.id, deriveRow({ ...row, tags: row.tags||[], updatedAt: row.updatedAt || new Date().toISOString() }));
+    }
+  });
+  return [...map.values()];
+}
+
+/* ── Tag Input ── */
+function TagInput({ tags, onChange, allTags }) {
+  const [input,    setInput]    = useState("");
+  const [focused,  setFocused]  = useState(false);
+  const [focusIdx, setFocusIdx] = useState(-1);
+  const inputRef = useRef();
+
+  const suggestions = useMemo(() => {
+    if (!input.trim()) return [];
+    const q = input.toLowerCase();
+    return allTags.filter(t => t.tag.toLowerCase().includes(q) && !tags.includes(t.tag)).slice(0, 6);
+  }, [input, allTags, tags]);
+
+  const addTag = tag => {
+    const clean = tag.trim().toLowerCase().replace(/\s+/g, "-");
+    if (clean && !tags.includes(clean)) onChange([...tags, clean]);
+    setInput(""); setFocusIdx(-1);
+  };
+  const removeTag = tag => onChange(tags.filter(t => t !== tag));
+  const handleKey = e => {
+    if ((e.key==="Enter"||e.key===",") && input.trim()) {
+      e.preventDefault();
+      focusIdx>=0&&suggestions[focusIdx] ? addTag(suggestions[focusIdx].tag) : addTag(input);
+    } else if (e.key==="Backspace"&&!input&&tags.length) { removeTag(tags[tags.length-1]); }
+    else if (e.key==="ArrowDown") { e.preventDefault(); setFocusIdx(i=>Math.min(i+1,suggestions.length-1)); }
+    else if (e.key==="ArrowUp")   { e.preventDefault(); setFocusIdx(i=>Math.max(i-1,-1)); }
+    else if (e.key==="Escape")    { setInput(""); setFocusIdx(-1); }
+  };
+
+  return (
+    <div>
+      <div className="tag-input-wrap" onClick={()=>inputRef.current?.focus()}>
+        {tags.map(t=>(
+          <span key={t} className="tag-chip">{t}
+            <button type="button" onClick={e=>{e.stopPropagation();removeTag(t);}}>×</button>
+          </span>
+        ))}
+        <input ref={inputRef} className="tag-input" value={input}
+          placeholder={tags.length?"":"e.g. sliced, honey, organic…"}
+          onChange={e=>{setInput(e.target.value);setFocusIdx(-1);}}
+          onKeyDown={handleKey}
+          onFocus={()=>setFocused(true)}
+          onBlur={()=>setTimeout(()=>{setFocused(false);setFocusIdx(-1);},150)} />
+      </div>
+      {focused&&suggestions.length>0&&(
+        <div className="tag-suggestions">
+          {suggestions.map((s,i)=>(
+            <div key={s.tag} className={`tag-suggestion${i===focusIdx?" focused":""}`}
+              onMouseDown={e=>{e.preventDefault();addTag(s.tag);}}>
+              <span>{s.tag}</span>
+              <span className="tag-suggestion-count">{s.count}×</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{fontSize:11,color:"#475569",marginTop:5}}>Press Enter or comma to add · Backspace to remove</div>
+    </div>
+  );
+}
+
+/* ── App ── */
+function App() {
+  const [secret,      setSecret]      = useState(()=>localStorage.getItem("gt_secret")||"");
+  const [secretInput, setSecretInput] = useState("");
+  const [entries, setEntries] = useState(() => {
+    try {
+      const old = localStorage.getItem("gt_v2");
+      if (old) {
+        const parsed = JSON.parse(old);
+        if (Array.isArray(parsed) && parsed.length) localStorage.setItem("gt_v3", old);
+        localStorage.removeItem("gt_v2");
+      }
+      return JSON.parse(localStorage.getItem("gt_v3")||"[]");
+    } catch { return []; }
+  });
+  const [tab,        setTab]        = useState("db");
+  const [form,       setForm]       = useState({ ...EMPTY, date:TODAY() });
+  const [editId,     setEditId]     = useState(null);
+  const [sortBy,     setSortBy]     = useState("date");
+  const [storeFilter,setStoreFilter]= useState("all");
+  const [searchQ,    setSearchQ]    = useState("");
+  const [tagFilter,  setTagFilter]  = useState(null);
+  const [analyticsCat,setAnalyticsCat]= useState(null);
+  const [analyticsSearch,setAnalyticsSearch]= useState("");
+  const [shopSelected, setShopSelected] = useState(new Set());
+  const [shopPinned, setShopPinned] = useState({});  // { product: store }
+  const [shopMaxStores, setShopMaxStores] = useState(0);  // 0 = unlimited
+  const [syncStatus,  setSyncStatus]  = useState("idle");
+  const [lastSynced,  setLastSynced]  = useState(null);
+  const [toast,      setToast]      = useState(null);
+  const [scanning,   setScanning]   = useState(false);
+  const importRef = useRef();
+  const searchRef = useRef();
+  const analyticsSearchRef = useRef();
+  const cameraRef = useRef();
+  const pushTimer = useRef(null);
+  const isFirstRender = useRef(true);
+  const lastStore = useRef("");
+
+  useEffect(() => {
+    try {
+      // Strip presigned URLs and data URLs from localStorage; store s3:// paths only
+      const toStore = entries.map(e => {
+        const copy = {...e};
+        // If we have an explicit S3 path, use that
+        if (copy.imageS3Path) {
+          copy.imageUrl = copy.imageS3Path;
+          delete copy.imageS3Path;
+        }
+        // If imageUrl is a presigned S3 URL, convert back to s3:// path
+        else if (copy.imageUrl && copy.imageUrl.includes('grocery-tracker.s3.')) {
+          try {
+            const url = new URL(copy.imageUrl);
+            const key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+            copy.imageUrl = `s3://grocery-tracker/${key}`;
+          } catch {}
+        }
+        // If it's a data URL, strip it (too large for localStorage)
+        else if (copy.imageUrl && copy.imageUrl.startsWith('data:')) {
+          copy.imageUrl = null;
+        }
+        return copy;
+      });
+      localStorage.setItem("gt_v3", JSON.stringify(toStore));
+    } catch {}
+  }, [entries]);
+
+  const showToast = msg => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2600);
+  };
+
+  /* ── Cloud pull ── */
+  const pullCloud = useCallback(async (sk) => {
+    const key = sk||secret; if (!key) return;
+    setSyncStatus("syncing");
+    try {
+      const res = await fetch(LAMBDA_URL, { headers:{"x-secret":key} });
+      if (res.status===403) { setSyncStatus("error"); showToast("❌ Wrong secret key"); return; }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const remote = data.entries||[];
+      setEntries(prev => {
+        const merged = mergeEntries(prev, remote);
+        // Overlay fresh presigned URLs from remote (they expire, so always take the newest)
+        const urlMap = new Map(remote.filter(e=>e.imageUrl).map(e=>[e.id, e.imageUrl]));
+        const withFreshUrls = merged.map(e => urlMap.has(e.id) ? {...e, imageUrl: urlMap.get(e.id)} : e);
+        pushCloud(withFreshUrls, key);
+        return withFreshUrls;
+      });
+      setLastSynced(new Date()); setSyncStatus("synced");
+    } catch { setSyncStatus("error"); showToast("⚠️ Sync failed — working offline"); }
+  }, [secret]);
+
+  /* ── Cloud push ── */
+  const pushCloud = useCallback(async (entriesToPush, sk) => {
+    const key = sk||secret; if (!key) return;
+    setSyncStatus("syncing");
+    try {
+      // For cloud storage, convert all image URLs back to s3:// paths
+      const cloudEntries = entriesToPush.map(e => {
+        const copy = {...e};
+        // Explicit S3 path takes priority
+        if (copy.imageS3Path) { copy.imageUrl = copy.imageS3Path; }
+        // Convert presigned URLs back to s3:// paths
+        else if (copy.imageUrl && copy.imageUrl.includes('grocery-tracker.s3.')) {
+          try {
+            const url = new URL(copy.imageUrl);
+            const k = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+            copy.imageUrl = `s3://grocery-tracker/${k}`;
+          } catch {}
+        }
+        delete copy.imageS3Path;
+        return copy;
+      });
+      const res = await fetch(LAMBDA_URL, {
+        method:"PUT",
+        headers:{"Content-Type":"application/json","x-secret":key},
+        body: JSON.stringify({entries: cloudEntries})
+      });
+      if (!res.ok) throw new Error();
+      setLastSynced(new Date()); setSyncStatus("synced");
+    } catch { setSyncStatus("error"); }
+  }, [secret]);
+
+  // Pull on mount (once secret is set)
+  useEffect(()=>{ if (secret) pullCloud(secret); },[]);
+
+  // Debounced push whenever entries change (skip initial mount)
+  useEffect(()=>{
+    if (isFirstRender.current) { isFirstRender.current=false; return; }
+    if (!secret) return;
+    clearTimeout(pushTimer.current);
+    pushTimer.current = setTimeout(()=>pushCloud(entries), 1500);
+    return ()=>clearTimeout(pushTimer.current);
+  }, [entries]);
+
+  const saveSecret = () => {
+    const s = secretInput.trim(); if (!s) return;
+    localStorage.setItem("gt_secret",s);
+    setSecret(s);
+    pullCloud(s);
+  };
+
+  const allProducts = useMemo(() => [...new Set(entries.filter(e=>!e.deletedAt).map(e=>e.product).filter(Boolean))].sort(), [entries]);
+  const allBrands   = useMemo(() => [...new Set(entries.filter(e=>!e.deletedAt).map(e=>e.brand).filter(Boolean))].sort(),   [entries]);
+  const allStores   = useMemo(() => [...new Set(entries.filter(e=>!e.deletedAt).map(e=>e.store).filter(Boolean))].sort(),   [entries]);
+  const allCats     = useMemo(() => [...new Set(entries.filter(e=>!e.deletedAt).map(e=>e.category).filter(Boolean))].sort(),[entries]);
+  const allTags     = useMemo(()=>{
+    const counts={};
+    entries.filter(e=>!e.deletedAt).forEach(e=>(e.tags||[]).forEach(t=>{counts[t]=(counts[t]||0)+1;}));
+    return Object.entries(counts).map(([tag,count])=>({tag,count})).sort((a,b)=>b.count-a.count);
+  },[entries]);
+  const activeCount = useMemo(() => entries.filter(e=>!e.deletedAt).length, [entries]);
+  const deletedCount = useMemo(() => entries.filter(e=>!!e.deletedAt).length, [entries]);
+
+  const sf = k => e => setForm(f=>({...f,[k]:e.target.value}));
+
+  const save = () => {
+    if (!form.product.trim()) return;
+    const row = deriveRow({ ...form, id: editId||uid(), tags: form.tags||[], updatedAt: new Date().toISOString() });
+    // Carry imageS3Path through so pushCloud can use it
+    if (form.imageS3Path) row.imageS3Path = form.imageS3Path;
+    if (form.store) lastStore.current = form.store;
+    setEntries(prev => editId ? prev.map(e=>e.id===editId?row:e) : [...prev, row]);
+    showToast(editId ? "✅ Entry updated!" : `✅ ${form.product} added!`);
+    setForm({ ...EMPTY, date:TODAY(), store:lastStore.current }); setEditId(null); setTab("db");
+  };
+
+  const startEdit = e => { setForm({...e, tags:e.tags||[]}); setEditId(e.id); setTab("add"); };
+  const duplicate = e => { setForm({...e, tags:e.tags||[], id:undefined, date:TODAY(), totalPrice:"", regPrice:"", onSale:"", notes:"", imageUrl:e.imageUrl||null, imageS3Path:e.imageS3Path||null}); setEditId(null); setTab("add"); };
+  const cancel    = () => { setForm({...EMPTY,date:TODAY(), store:lastStore.current}); setEditId(null); setTab("db"); };
+  const del       = id => { if (window.confirm("Delete this entry?")) setEntries(p=>p.map(e=>e.id===id?{...e, deletedAt:new Date().toISOString(), updatedAt:new Date().toISOString()}:e)); };
+  const purgeDeleted = () => { if (window.confirm(`Permanently remove ${deletedCount} deleted entries? Make sure both devices are synced first.`)) { setEntries(p=>p.filter(e=>!e.deletedAt)); showToast(`🗑️ Purged ${deletedCount} deleted entries`); } };
+  const switchTab = id => { if(id!=="add"){setEditId(null);setForm({...EMPTY,date:TODAY(), store:lastStore.current});} setTab(id); };
+  const filterByTag = tag => { setTagFilter(tag); setSearchQ(""); };
+
+  /* ── Export ── */
+  const exportData = () => {
+    const payload = { version:1, exportedAt: new Date().toISOString(), entries };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = `grocery-tracker-${TODAY()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("✅ Exported!");
+  };
+
+  /* ── Import (merge by id, newer wins) ── */
+  const importData = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        const incoming = parsed.entries || parsed; // support bare array too
+        if (!Array.isArray(incoming)) throw new Error("Invalid format");
+        setEntries(prev => mergeEntries(prev, incoming));
+        showToast(`✅ Imported ${incoming.length} entries (merged)`);
+      } catch {
+        showToast("❌ Import failed — invalid file");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ""; // reset so same file can be re-imported
+  };
+
+  /* ── Camera Scan Feature ── */
+  const createThumbnail = async (imageFile) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Center crop to square
+          const size = Math.min(img.width, img.height);
+          const x = (img.width - size) / 2;
+          const y = (img.height - size) / 2;
+          
+          // Resize to 200x200
+          canvas.width = 200;
+          canvas.height = 200;
+          ctx.drawImage(img, x, y, size, size, 0, 0, 200, 200);
+          
+          // Return as data URL
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(imageFile);
+    });
+  };
+
+  const handleImageCapture = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setScanning(true);
+    showToast("📸 Processing image...");
+    
+    try {
+      // Create thumbnail for S3 upload
+      const thumbnailDataUrl = await createThumbnail(file);
+      const thumbnailBase64 = thumbnailDataUrl.split(',')[1]; // Extract base64 part
+      
+      // Convert full image to base64 for Claude
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      // Get file type
+      const mediaType = file.type;
+      
+      // Call Lambda - it will analyze image AND upload thumbnail to S3
+      const extracted = await scanProductImage(base64, thumbnailBase64, mediaType);
+      
+      if (extracted) {
+        // Auto-fill form with extracted data + S3 URL
+        setForm(f => ({
+          ...f,
+          product: extracted.product || f.product,
+          brand: extracted.brand || f.brand,
+          category: extracted.category || f.category,
+          totalPrice: extracted.price != null ? extracted.price.toString() : f.totalPrice,
+          weight: extracted.size != null ? extracted.size.toString() : f.weight,
+          unit: extracted.unit || f.unit,
+          onSale: extracted.sale ? "Y" : f.onSale,
+          notes: extracted.notes || f.notes,
+          tags: Array.isArray(extracted.tags) && extracted.tags.length ? extracted.tags : (f.tags || []),
+          date: f.date || TODAY(),
+          imageUrl: thumbnailDataUrl || null,    // Local thumbnail for immediate display
+          imageS3Path: extracted.imageUrl || null // S3 path for cloud storage
+        }));
+        showToast("✅ Product scanned!");
+      } else {
+        showToast("⚠️ Could not extract product info");
+      }
+    } catch (err) {
+      console.error("Scan error:", err);
+      showToast("❌ Scan failed - " + (err.message || "try again"));
+    } finally {
+      setScanning(false);
+      e.target.value = ""; // reset input
+    }
+  };
+
+  const scanProductImage = async (base64Image, thumbnailBase64, mediaType) => {
+    // Call your Lambda function to scan the image and upload thumbnail
+    // Send existing product names so Claude can match against them
+    const response = await fetch(LAMBDA_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        image: base64Image,
+        thumbnail: thumbnailBase64,
+        mediaType: mediaType,
+        existingProducts: allProducts,
+        existingCategories: allCats,
+        existingTags: allTags.map(t => t.tag)
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Scan failed (${response.status})`);
+    }
+    
+    return await response.json();
+  };
+
+  const filtered = useMemo(() => {
+    const q=searchQ.toLowerCase();
+    return entries
+      .filter(e => {
+        if (e.deletedAt) return false;
+        if (storeFilter!=="all" && e.store!==storeFilter) return false;
+        if (tagFilter && !(e.tags||[]).includes(tagFilter)) return false;
+        if (!q) return true;
+        return (e.product||"").toLowerCase().includes(q)||(e.brand||"").toLowerCase().includes(q)||
+               (e.category||"").toLowerCase().includes(q)||(e.store||"").toLowerCase().includes(q)||
+               (e.tags||[]).some(t=>t.includes(q));
+      })
+      .sort((a,b) => {
+        if (sortBy==="date")    return (b.date||"").localeCompare(a.date||"");
+        if (sortBy==="product") return (a.product||"").localeCompare(b.product||"");
+        if (sortBy==="brand")   return (a.brand||"").localeCompare(b.brand||"");
+        if (sortBy==="price")   return parseFloat(a.totalPrice)-parseFloat(b.totalPrice);
+        return 0;
+      });
+  }, [entries, storeFilter, searchQ, tagFilter, sortBy]);
+
+  /* ── Analytics: group by product → brand → store ── */
+  const productAnalytics = useMemo(() => {
+    let active = entries.filter(e=>!e.deletedAt);
+    if (analyticsCat) active = active.filter(e=>(e.category||"").toLowerCase()===analyticsCat.toLowerCase());
+    const base = active;
+    const products=[...new Set(base.map(e=>e.product).filter(Boolean))].sort();
+    return products.map(p => {
+    const pRows = base.filter(e=>e.product===p);
+    const prices = pRows.map(r=>parseFloat(r.totalPrice)).filter(x=>!isNaN(x));
+
+    // Determine best display unit for this product
+    const unitInfo = bestUnitLabel(pRows);
+    const ppkgAll = pRows.map(r=>r.pricePerKg).filter(x=>x!=null);
+    let unitLabel=null, unitAvg=null, unitMin=null, unitMax=null;
+    if (unitInfo && ppkgAll.length) {
+      const converted = ppkgAll.map(v => v * unitInfo.mult);
+      unitLabel = unitInfo.label;
+      unitAvg = avg(converted);
+      unitMin = minSafe(converted);
+      unitMax = maxSafe(converted);
+    }
+
+    // brands within this product
+    const brandsInProduct = [...new Set(pRows.map(e=>e.brand||"(no brand)"))].sort();
+    const brandData = brandsInProduct.map(b => {
+      const bRows = pRows.filter(e=>(e.brand||"(no brand)")===b);
+      const bPrices = bRows.map(r=>parseFloat(r.totalPrice)).filter(x=>!isNaN(x));
+      const ppkg    = bRows.map(r=>r.pricePerKg).filter(x=>x!=null);
+
+      // Per-unit stats for this brand (using same unit as product)
+      let bUnitAvg=null, bUnitMin=null, bUnitMax=null;
+      if (unitInfo && ppkg.length) {
+        const bc = ppkg.map(v => v * unitInfo.mult);
+        bUnitAvg = avg(bc);
+        bUnitMin = minSafe(bc);
+        bUnitMax = maxSafe(bc);
+      }
+
+      // stores for this brand
+      const byStore = {};
+      bRows.forEach(r => {
+        if (r.store && !isNaN(parseFloat(r.totalPrice))) {
+          byStore[r.store]=byStore[r.store]||[];
+          byStore[r.store].push(parseFloat(r.totalPrice));
+        }
+      });
+      const storeAvgs = Object.entries(byStore).map(([s,ps])=>({store:s,avg:avg(ps)})).sort((a,b)=>a.avg-b.avg);
+      const maxAvg = storeAvgs.length ? storeAvgs.at(-1).avg : 1;
+
+      // Per-unit store averages
+      const byStoreUnit = {};
+      bRows.forEach(r => {
+        if (r.store && r.pricePerKg!=null && unitInfo) {
+          byStoreUnit[r.store]=byStoreUnit[r.store]||[];
+          byStoreUnit[r.store].push(r.pricePerKg * unitInfo.mult);
+        }
+      });
+      const storeUnitAvgs = Object.entries(byStoreUnit).map(([s,ps])=>({store:s,avg:avg(ps)})).sort((a,b)=>a.avg-b.avg);
+      const maxUnitAvg = storeUnitAvgs.length ? storeUnitAvgs.at(-1).avg : 1;
+
+      // If per-unit data is available, re-sort storeAvgs by per-unit price for correct ordering
+      let sortedStoreAvgs = storeAvgs;
+      if (storeUnitAvgs.length >= storeAvgs.length) {
+        // Sort stores by per-weight price instead of total price
+        const unitOrder = Object.fromEntries(storeUnitAvgs.map((s,i) => [s.store, i]));
+        sortedStoreAvgs = [...storeAvgs].sort((a,b) => {
+          const aIdx = unitOrder[a.store] ?? 999;
+          const bIdx = unitOrder[b.store] ?? 999;
+          return aIdx - bIdx;
+        });
+      }
+
+      return { brand:b, count:bRows.length, avgPrice:avg(bPrices), minPrice:minSafe(bPrices), maxPrice:maxSafe(bPrices), avgPpkg:avg(ppkg), bUnitAvg, bUnitMin, bUnitMax, storeAvgs: sortedStoreAvgs, maxAvg, storeUnitAvgs, maxUnitAvg, hasUnitData: storeUnitAvgs.length >= storeAvgs.length };
+    });
+
+    const imageEntry = pRows.find(e => e.imageUrl && !e.imageUrl.startsWith('s3://'));
+    const image = imageEntry ? imageEntry.imageUrl : null;
+
+    const allProductTags = [...new Set(pRows.flatMap(e=>e.tags||[]))].sort();
+
+    return { product:p, image, tags:allProductTags, count:pRows.length, avgPrice:avg(prices), minPrice:minSafe(prices), maxPrice:maxSafe(prices), avgPpkg:avg(ppkgAll), unitLabel, unitAvg, unitMin, unitMax, brandData };
+    });
+  }, [entries, analyticsCat]);
+
+  const filteredAnalytics = useMemo(() => {
+    if (!analyticsSearch.trim()) return productAnalytics;
+    const q = analyticsSearch.toLowerCase();
+    return productAnalytics.filter(p =>
+      p.product.toLowerCase().includes(q) ||
+      p.brandData.some(b => b.brand.toLowerCase().includes(q)) ||
+      p.tags.some(t => t.toLowerCase().includes(q))
+    );
+  }, [productAnalytics, analyticsSearch]);
+
+  /* ── Shopping List: products grouped by category ── */
+  const shopProducts = useMemo(() => {
+    const active = entries.filter(e => !e.deletedAt);
+    const productSet = [...new Set(active.map(e => e.product).filter(Boolean))].sort();
+    const byCat = {};
+    productSet.forEach(p => {
+      const cat = active.find(e => e.product === p)?.category || "Other";
+      (byCat[cat] = byCat[cat] || []).push(p);
+    });
+    return { byCat, productSet };
+  }, [entries]);
+
+  /* ── Shopping List: optimizer with constraints ── */
+  const shopResults = useMemo(() => {
+    if (!shopSelected.size) return null;
+    const active = entries.filter(e => !e.deletedAt);
+    const storeSet = [...new Set(active.map(e => e.store).filter(Boolean))];
+
+    // Build per-product store pricing data
+    const productData = [];
+    for (const product of shopSelected) {
+      const rows = active.filter(e => e.product === product);
+      if (!rows.length) continue;
+      const cat = rows[0]?.category || "";
+
+      const storeAvgs = {};
+      const storeTotals = {};  // avg total price per store
+      const storeLabels = {};
+      for (const store of storeSet) {
+        const sRows = rows.filter(e => e.store === store);
+        if (!sRows.length) continue;
+        const prices = sRows.map(e => parseFloat(e.totalPrice)).filter(x => !isNaN(x));
+        if (prices.length) storeTotals[store] = avg(prices);
+        const ppkgs = sRows.map(e => e.pricePerKg).filter(x => x != null);
+        if (ppkgs.length) {
+          storeAvgs[store] = avg(ppkgs);
+          storeLabels[store] = { type: "kg", val: avg(ppkgs) };
+        } else if (prices.length) {
+          storeAvgs[store] = avg(prices);
+          storeLabels[store] = { type: "total", val: avg(prices) };
+        }
+      }
+      if (!Object.keys(storeAvgs).length) continue;
+      productData.push({ product, category: cat, storeAvgs, storeTotals, storeLabels });
+    }
+
+    // Helper: given a set of allowed stores, assign each product optimally
+    const assignToStores = (allowedStores) => {
+      const items = [];
+      let total = 0, missing = [];
+      for (const pd of productData) {
+        const pinStore = shopPinned[pd.product];
+        let assignedStore = null;
+
+        if (pinStore && allowedStores.has(pinStore)) {
+          assignedStore = pinStore;
+        } else if (pinStore && !allowedStores.has(pinStore)) {
+          // Pinned store not in allowed set — item can't be bought
+          missing.push(pd.product);
+          continue;
+        } else {
+          // Pick cheapest from allowed stores
+          let best = null, bestVal = Infinity;
+          for (const s of allowedStores) {
+            if (pd.storeAvgs[s] != null && pd.storeAvgs[s] < bestVal) {
+              bestVal = pd.storeAvgs[s];
+              best = s;
+            }
+          }
+          if (!best) { missing.push(pd.product); continue; }
+          assignedStore = best;
+        }
+
+        const avgTotal = pd.storeTotals[assignedStore] || 0;
+        items.push({
+          product: pd.product, category: pd.category,
+          bestStore: assignedStore,
+          bestPrice: pd.storeAvgs[assignedStore],
+          bestInfo: pd.storeLabels[assignedStore],
+          bestTotal: avgTotal,
+          storeAvgs: pd.storeAvgs,
+          storeLabels: pd.storeLabels,
+          pinned: !!shopPinned[pd.product]
+        });
+        total += avgTotal;
+      }
+      return { items, total, missing };
+    };
+
+    // Generate store combinations
+    const pinnedStores = new Set(Object.values(shopPinned).filter(s => shopSelected.has([...shopSelected].find(p => shopPinned[p] === s))));
+    // More precisely: stores that are pinned by currently selected products
+    const activePins = {};
+    for (const p of shopSelected) {
+      if (shopPinned[p]) activePins[p] = shopPinned[p];
+    }
+    const forcedStores = new Set(Object.values(activePins));
+    const maxS = shopMaxStores || storeSet.length;  // 0 = unlimited
+
+    let bestResult = null;
+    let bestComboStores = null;
+
+    if (forcedStores.size > maxS) {
+      // Can't satisfy constraints — too many pinned stores
+      return { error: `You've pinned items to ${forcedStores.size} stores but max is ${maxS}. Increase the limit or unpin some items.` };
+    }
+
+    // Generate combos: forced stores + pick remaining from non-forced
+    const nonForced = storeSet.filter(s => !forcedStores.has(s));
+    const slotsLeft = maxS - forcedStores.size;
+
+    const combos = [];
+    const generateCombos = (arr, k, start = 0, current = []) => {
+      if (current.length === k) { combos.push([...current]); return; }
+      for (let i = start; i < arr.length; i++) {
+        current.push(arr[i]);
+        generateCombos(arr, k, i + 1, current);
+        current.pop();
+      }
+    };
+    // Try all sizes from 0 up to slotsLeft (fewer stores might still be optimal)
+    for (let k = 0; k <= Math.min(slotsLeft, nonForced.length); k++) {
+      generateCombos(nonForced, k);
+    }
+
+    for (const extra of combos) {
+      const allowed = new Set([...forcedStores, ...extra]);
+      const result = assignToStores(allowed);
+      if (!bestResult || result.total < bestResult.total || (result.total === bestResult.total && allowed.size < bestComboStores.size)) {
+        bestResult = result;
+        bestComboStores = allowed;
+      }
+    }
+
+    if (!bestResult || !bestResult.items.length) return null;
+
+    // Group by store
+    const byStore = {};
+    storeSet.forEach(s => { byStore[s] = []; });
+    bestResult.items.forEach(item => {
+      (byStore[item.bestStore] = byStore[item.bestStore] || []).push(item);
+    });
+
+    // Single-store estimates for comparison
+    const singleStore = {};
+    for (const store of storeSet) {
+      const result = assignToStores(new Set([store]));
+      if (result.items.length > 0) {
+        singleStore[store] = {
+          total: result.total,
+          covered: result.items.length,
+          missing: result.missing,
+          overpayPct: bestResult.total > 0 ? Math.round((result.total / bestResult.total - 1) * 100) : 0
+        };
+      }
+    }
+
+    return {
+      items: bestResult.items,
+      byStore,
+      optimalTotal: bestResult.total,
+      missing: bestResult.missing,
+      singleStore,
+      storeSet,
+      usedStores: bestComboStores,
+      maxStoresActive: shopMaxStores > 0
+    };
+  }, [shopSelected, shopPinned, shopMaxStores, entries]);
+
+  const toggleShopItem = (product) => {
+    setShopSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(product)) {
+        next.delete(product);
+        // Also remove pin if deselected
+        if (shopPinned[product]) {
+          setShopPinned(prev => { const n = {...prev}; delete n[product]; return n; });
+        }
+      } else {
+        next.add(product);
+      }
+      return next;
+    });
+  };
+  const togglePin = (product, store) => {
+    setShopPinned(prev => {
+      const n = {...prev};
+      if (n[product] === store) delete n[product];  // unpin
+      else n[product] = store;
+      return n;
+    });
+  };
+  const selectAllShop = () => setShopSelected(new Set(shopProducts.productSet));
+  const clearAllShop = () => { setShopSelected(new Set()); setShopPinned({}); };
+
+  const preview = deriveRow(form);
+
+  /* ── Price Comparison ── */
+  const comparison = useMemo(() => {
+    const product = (form.product||"").trim().toLowerCase();
+    const price = parseFloat(form.totalPrice);
+    if (!product || isNaN(price)) return null;
+
+    const matches = entries.filter(e => !e.deletedAt && (e.product||"").toLowerCase() === product);
+    if (!matches.length) return { isNew: true };
+
+    const prices = matches.map(e => parseFloat(e.totalPrice)).filter(x => !isNaN(x));
+    if (!prices.length) return { isNew: true };
+
+    const avgP = avg(prices), minP = minSafe(prices), maxP = maxSafe(prices);
+
+    // Determine best normalized price for verdict: $/kg > $/unit > total
+    const ppkg = preview.pricePerKg;
+    const ppu = preview.pricePerUnit;
+    let verdictPct = null, verdictBasis = "total";
+
+    if (ppkg != null) {
+      const histPpkg = matches.map(e => e.pricePerKg).filter(x => x != null);
+      if (histPpkg.length) {
+        const a = avg(histPpkg);
+        if (a) { verdictPct = Math.round((ppkg - a) / a * 100); verdictBasis = "weight"; }
+      }
+    }
+    if (verdictPct === null && ppu != null) {
+      const histPpu = matches.map(e => e.pricePerUnit).filter(x => x != null);
+      if (histPpu.length) {
+        const a = avg(histPpu);
+        if (a) { verdictPct = Math.round((ppu - a) / a * 100); verdictBasis = "unit"; }
+      }
+    }
+    if (verdictPct === null && avgP) {
+      verdictPct = Math.round((price - avgP) / avgP * 100);
+      verdictBasis = "total";
+    }
+
+    // Verdict
+    let verdict = "average", verdictIcon = "🟡", verdictColor = "#d97706";
+    if (verdictPct !== null) {
+      if (verdictPct <= -10) { verdict = "great deal"; verdictIcon = "🟢"; verdictColor = "#16a34a"; }
+      else if (verdictPct <= 5) { verdict = "average"; verdictIcon = "🟡"; verdictColor = "#d97706"; }
+      else { verdict = "pricey"; verdictIcon = "🔴"; verdictColor = "#dc2626"; }
+    }
+    const verdictNote = verdictBasis === "weight" ? "by weight" : verdictBasis === "unit" ? "by unit" : "by total";
+
+    // Best price ever (use normalized: $/kg > $/unit > total)
+    let cheapest, bestLabel;
+    if (ppkg != null && matches.some(e => e.pricePerKg != null)) {
+      const withPpkg = matches.filter(e => e.pricePerKg != null);
+      const bestPpkg = minSafe(withPpkg.map(e => e.pricePerKg));
+      cheapest = withPpkg.find(e => e.pricePerKg === bestPpkg);
+      bestLabel = fmt$(cheapest?.pricePerKg) + "/kg";
+    } else if (ppu != null && matches.some(e => e.pricePerUnit != null)) {
+      const withPpu = matches.filter(e => e.pricePerUnit != null);
+      const bestPpu = minSafe(withPpu.map(e => e.pricePerUnit));
+      cheapest = withPpu.find(e => e.pricePerUnit === bestPpu);
+      bestLabel = fmt$(cheapest?.pricePerUnit) + "/unit";
+    } else {
+      cheapest = matches.filter(e => parseFloat(e.totalPrice) === minP)[0];
+      bestLabel = fmt$(minP);
+    }
+
+    // Same store history (compare normalized)
+    const store = (form.store||"").trim().toLowerCase();
+    let storeHistory = null;
+    if (store) {
+      const storeMatches = matches.filter(e => (e.store||"").toLowerCase() === store)
+        .sort((a,b) => (b.date||"").localeCompare(a.date||""));
+      if (storeMatches.length) {
+        const storePrices = storeMatches.map(e => parseFloat(e.totalPrice)).filter(x => !isNaN(x));
+        const lastEntry = storeMatches[0];
+        // Compare using best normalized price
+        let trend = null, lastLabel = null;
+        if (ppkg != null && lastEntry.pricePerKg != null) {
+          trend = ppkg > lastEntry.pricePerKg ? "up" : ppkg < lastEntry.pricePerKg ? "down" : "same";
+          lastLabel = fmt$(lastEntry.pricePerKg) + "/kg";
+        } else if (ppu != null && lastEntry.pricePerUnit != null) {
+          trend = ppu > lastEntry.pricePerUnit ? "up" : ppu < lastEntry.pricePerUnit ? "down" : "same";
+          lastLabel = fmt$(lastEntry.pricePerUnit) + "/unit";
+        } else {
+          const lastPrice = parseFloat(lastEntry.totalPrice);
+          if (!isNaN(lastPrice)) {
+            trend = price > lastPrice ? "up" : price < lastPrice ? "down" : "same";
+            lastLabel = fmt$(lastPrice);
+          }
+        }
+        storeHistory = {
+          count: storeMatches.length,
+          lastLabel,
+          lastDate: lastEntry.date,
+          avgPrice: avg(storePrices),
+          trend
+        };
+      }
+    }
+
+    // Same brand history
+    const brand = (form.brand||"").trim().toLowerCase();
+    let brandHistory = null;
+    if (brand) {
+      const brandMatches = matches.filter(e => (e.brand||"").toLowerCase() === brand);
+      if (brandMatches.length) {
+        const brandPrices = brandMatches.map(e => parseFloat(e.totalPrice)).filter(x => !isNaN(x));
+        if (brandPrices.length) {
+          brandHistory = { count: brandMatches.length, avgPrice: avg(brandPrices), minPrice: minSafe(brandPrices) };
+        }
+      }
+    }
+
+    // Unit price comparison detail
+    let unitComparison = null;
+    if (ppkg != null) {
+      const withUnit = matches.filter(e => e.pricePerKg != null);
+      if (withUnit.length) {
+        const unitPrices = withUnit.map(e => e.pricePerKg);
+        const unitAvg = avg(unitPrices), unitMin = minSafe(unitPrices);
+        const unitPct = unitAvg ? Math.round((ppkg - unitAvg) / unitAvg * 100) : null;
+        unitComparison = { avgPerKg: unitAvg, minPerKg: unitMin, currentPerKg: ppkg, pctFromAvg: unitPct };
+      }
+    }
+
+    return { isNew: false, avgP, minP, maxP, verdictPct, verdict, verdictIcon, verdictColor, verdictNote, cheapest, bestLabel, storeHistory, brandHistory, unitComparison, totalRecords: matches.length };
+  }, [form.product, form.totalPrice, form.store, form.brand, preview.pricePerKg, preview.pricePerUnit, entries]);
+
+  const syncLabel = syncStatus==="syncing" ? <><span className="spin">⚙️</span> Syncing…</>
+                  : syncStatus==="synced"  ? `✓ ${lastSynced?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`
+                  : syncStatus==="error"   ? "⚠️ Sync error"
+                  : "○ Not synced";
+
+  /* ── First launch: no secret ── */
+  if (!secret) return (
+    <div className="setup-screen">
+      <div className="setup-icon">🔑</div>
+      <div className="setup-title">Enter your sync key</div>
+      <div className="setup-desc">Ask your family member for the sync key to connect your devices. It stays on your phone only.</div>
+      <input className="setup-input" type="password" placeholder="Your secret key…"
+        value={secretInput} onChange={e=>setSecretInput(e.target.value)}
+        onKeyDown={e=>e.key==="Enter"&&saveSecret()} autoFocus />
+      <button className="btn btn-primary" style={{maxWidth:320}} onClick={saveSecret}>Connect →</button>
+    </div>
+  );
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",minHeight:"100vh"}}>
+
+      {/* Header */}
+      <div className="header">
+        <div className="header-top">
+          <div className="logo">🛒 Grocery Tracker</div>
+          <span className={`sync-pill ${syncStatus}`}>{syncLabel}</span>
+        </div>
+        <div className="stats">{activeCount} entries · {allProducts.length} products · {allStores.length} stores</div>
+        <nav className="nav">
+          {[["db","🗂️","Database"],["add","➕","Add"],["shop","🛍️","Shop"],["analytics","📊","Analytics"],["sync","☁️","Sync"]].map(([id,icon,lbl])=>(
+            <button key={id} className={`nav-btn${tab===id?" active":""}`} onClick={()=>switchTab(id)}>
+              <span className="nav-icon">{icon}</span>
+              <span className="nav-label">{lbl}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* ── DATABASE ── */}
+      {tab==="db" && (
+        <div className="page">
+          <div className="search-wrap">
+            <span className="search-icon">🔍</span>
+            <input ref={searchRef} value={searchQ}
+              onChange={e=>{setSearchQ(e.target.value);setTagFilter(null);}}
+              placeholder="Search product, brand, tag…" />
+            {searchQ&&<button className="search-clear" onClick={()=>{setSearchQ("");searchRef.current?.focus();}}>×</button>}
+          </div>
+          {tagFilter&&(
+            <div className="tag-filter-banner">
+              <span>🏷️ Tag: <strong>{tagFilter}</strong></span>
+              <button onClick={()=>setTagFilter(null)}>×</button>
+            </div>
+          )}
+          <div className="filter-bar">
+            <button className={`filter-chip${storeFilter==="all"?" active":""}`} onClick={()=>setStoreFilter("all")}>All stores</button>
+            {allStores.map(s=>(
+              <button key={s} className={`filter-chip${storeFilter===s?" active":""}`} onClick={()=>setStoreFilter(s)}>{s}</button>
+            ))}
+          </div>
+
+          <div className="sort-row">
+            <label>Sort by</label>
+            <select value={sortBy} onChange={e=>setSortBy(e.target.value)}>
+              <option value="date">Date (newest)</option>
+              <option value="product">Product A–Z</option>
+              <option value="brand">Brand A–Z</option>
+              <option value="price">Price (low–high)</option>
+            </select>
+          </div>
+
+          {filtered.length===0
+            ? <div className="empty"><div className="empty-icon">{activeCount===0?"🛒":"🔍"}</div><div className="empty-text">{activeCount===0?"No entries yet.\nTap Add to get started.":"No results found."}</div></div>
+            : filtered.map(e=>(
+                <div className="entry-card" key={e.id}>
+                  <div className="entry-top">
+                    {e.imageUrl && !e.imageUrl.startsWith('s3://') && (
+                      <img 
+                        src={e.imageUrl} 
+                        alt={e.product}
+                        onError={(ev) => { ev.target.style.display='none'; ev.target.nextSibling && (ev.target.nextSibling.style.display='flex'); }}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: 8,
+                          objectFit: 'cover',
+                          marginRight: 12,
+                          flexShrink: 0,
+                          border: '1px solid #e2e8f0'
+                        }}
+                      />
+                    )}
+                    {e.imageUrl && !e.imageUrl.startsWith('s3://') && (
+                      <div style={{
+                        display: 'none',
+                        width: 60, height: 60, borderRadius: 8, marginRight: 12, flexShrink: 0,
+                        background: '#fee2e2', border: '1px solid #fca5a5',
+                        alignItems: 'center', justifyContent: 'center',
+                        fontSize: 11, color: '#dc2626', fontWeight: 700, textAlign: 'center', lineHeight: 1.2
+                      }}>IMG<br/>FAIL</div>
+                    )}
+                    <div style={{minWidth:0,flex:1}}>
+                      <div className="entry-product">{e.product}</div>
+                      {e.brand && <div className="entry-brand">{e.brand}</div>}
+                      <div className="entry-meta">
+                        {[e.store, e.category, e.date].filter(Boolean).join(" · ")}
+                        {e.onSale==="Y" && <> &nbsp;<span className="sale-badge">SALE</span></>}
+                      </div>
+                    </div>
+                    <div className="entry-actions">
+                      <button className="btn btn-secondary btn-sm" title="Buy again" onClick={()=>duplicate(e)}>↻</button>
+                      <button className="btn btn-secondary btn-sm" onClick={()=>startEdit(e)}>✏️</button>
+                      <button className="btn btn-danger btn-sm"    onClick={()=>del(e.id)}>🗑️</button>
+                    </div>
+                  </div>
+                  <div className="entry-prices">
+                    {fmt$(e.totalPrice)   && <div className="price-pill main"><span className="plbl">Total</span><span className="pval">{fmt$(e.totalPrice)}</span></div>}
+                    {fmt$(e.pricePerUnit) && <div className="price-pill"><span className="plbl">/ unit</span><span className="pval">{fmt$(e.pricePerUnit)}</span></div>}
+                    {fmt$(e.pricePer100g) && <div className="price-pill"><span className="plbl">/ 100g</span><span className="pval">{fmt$(e.pricePer100g)}</span></div>}
+                    {fmt$(e.pricePerKg)   && <div className="price-pill"><span className="plbl">/ kg</span><span className="pval">{fmt$(e.pricePerKg)}</span></div>}
+                    {e.saving>0           && <div className="price-pill"><span className="plbl">Saving</span><span className="pval" style={{color:"#4ade80"}}>{fmt$(e.saving)}</span></div>}
+                    {e.weight&&e.unit     && <div className="price-pill"><span className="plbl">Size</span><span className="pval">{e.weight}{e.unit}</span></div>}
+                  </div>
+                  {e.notes && <div style={{marginTop:8,fontSize:12,color:"#64748b"}}>📝 {e.notes}</div>}
+                  {(e.tags||[]).length>0&&<div className="entry-tags">{(e.tags||[]).map(t=><span key={t} className="entry-tag" onClick={()=>filterByTag(t)}>#{t}</span>)}</div>}
+                </div>
+              ))
+          }
+        </div>
+      )}
+
+      {/* ── ADD / EDIT ── */}
+      {tab==="add" && (
+        <div className="page">
+          <div className="card">
+            <h2 style={{fontSize:18,fontWeight:800,color:"#60a5fa",marginBottom:20}}>{editId?"✏️ Edit Entry":"➕ New Entry"}</h2>
+
+            {/* Camera scan feature (only show when adding new entry, not editing) */}
+            {!editId && (
+              <>
+                <input 
+                  ref={cameraRef}
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment"
+                  style={{display:"none"}}
+                  onChange={handleImageCapture}
+                />
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={()=>cameraRef.current?.click()}
+                  disabled={scanning}
+                  style={{marginBottom:16}}
+                >
+                  {scanning ? "🔄 Scanning..." : "📸 Scan Product"}
+                </button>
+                
+                {/* Image preview */}
+                {form.imageUrl && !form.imageUrl.startsWith('s3://') && (
+                  <div style={{
+                    marginBottom: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: 12,
+                    background: '#f8fafc',
+                    borderRadius: 10,
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <img 
+                      src={form.imageUrl} 
+                      alt="Product preview"
+                      style={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: 8,
+                        objectFit: 'cover',
+                        border: '1px solid #e2e8f0'
+                      }}
+                    />
+                    <div style={{flex: 1, fontSize: 13, color: '#64748b'}}>
+                      ✓ Image captured
+                    </div>
+                    <button 
+                      className="btn btn-sm"
+                      style={{background: '#fee2e2', color: '#dc2626'}}
+                      onClick={() => setForm(f => ({...f, imageUrl: null, imageS3Path: null}))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="field">
+              <label className="lbl">Product Name <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— generic name, e.g. "Butter"</span></label>
+              <input value={form.product||""} onChange={sf("product")} placeholder="e.g. Butter, Milk, Pasta" list="prod-list" />
+              <datalist id="prod-list">{allProducts.map(p=><option key={p} value={p}/>)}</datalist>
+            </div>
+
+            <div className="field">
+              <label className="lbl">Brand <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— e.g. "Lactantia"</span></label>
+              <input value={form.brand||""} onChange={sf("brand")} placeholder="e.g. Natrel, PC, No Name…" list="brand-list" />
+              <datalist id="brand-list">{allBrands.map(b=><option key={b} value={b}/>)}</datalist>
+            </div>
+
+            <div className="field-row cols-2">
+              <div>
+                <label className="lbl">Store</label>
+                <input value={form.store||""} onChange={sf("store")} placeholder="e.g. Metro" list="store-list" />
+                <datalist id="store-list">{allStores.map(s=><option key={s} value={s}/>)}</datalist>
+              </div>
+              <div>
+                <label className="lbl">Category</label>
+                <input value={form.category||""} onChange={sf("category")} placeholder="e.g. Dairy" list="cat-list" />
+                <datalist id="cat-list">{allCats.map(c=><option key={c} value={c}/>)}</datalist>
+              </div>
+            </div>
+
+            <div className="field-row cols-2">
+              <div>
+                <label className="lbl">Total Price ($)</label>
+                <input type="number" step="0.01" value={form.totalPrice||""} onChange={sf("totalPrice")} placeholder="4.99" />
+              </div>
+              <div>
+                <label className="lbl">Regular Price ($)</label>
+                <input type="number" step="0.01" value={form.regPrice||""} onChange={sf("regPrice")} placeholder="6.99" />
+              </div>
+            </div>
+
+            <div className="field-row cols-3">
+              <div>
+                <label className="lbl">Weight</label>
+                <input type="number" value={form.weight||""} onChange={sf("weight")} placeholder="500" />
+              </div>
+              <div>
+                <label className="lbl">Unit</label>
+                <select value={form.unit||""} onChange={sf("unit")}>
+                  {["","g","kg","mL","L","oz","lb"].map(u=><option key={u} value={u}>{u||"—"}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="lbl"># Units</label>
+                <input type="number" min="1" value={form.units||""} onChange={sf("units")} placeholder="1" />
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="lbl">Tags <span style={{color:"#64748b",fontWeight:400,textTransform:"none",letterSpacing:0}}>— variants, e.g. "black-forest, sliced"</span></label>
+              <TagInput tags={form.tags||[]} onChange={tags=>setForm(f=>({...f,tags}))} allTags={allTags} />
+            </div>
+
+            <div className="field-row cols-2">
+              <div>
+                <label className="lbl">Date</label>
+                <input type="date" value={form.date||""} onChange={sf("date")} />
+              </div>
+              <div>
+                <label className="lbl">On Sale?</label>
+                <select value={form.onSale||""} onChange={sf("onSale")}>
+                  <option value="">—</option>
+                  <option value="Y">✅ Yes</option>
+                  <option value="N">No</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="lbl">Notes</label>
+              <input value={form.notes||""} onChange={sf("notes")} placeholder="Optional" />
+            </div>
+
+            {form.totalPrice && (
+              <div className="calc-preview">
+                <div style={{width:"100%",fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:0.8,marginBottom:4}}>Auto-calculated</div>
+                {[["$/unit",preview.pricePerUnit],["$/100g",preview.pricePer100g],["$/kg",preview.pricePerKg],["Saving",preview.saving]].map(([l,v])=>v!=null?(
+                  <div key={l} style={{display:"flex",flexDirection:"column",gap:2}}>
+                    <span className="calc-lbl">{l}</span>
+                    <span className="calc-val">{fmt$(v)}</span>
+                  </div>
+                ):null)}
+              </div>
+            )}
+
+            {/* ── Price Comparison Panel ── */}
+            {comparison && !editId && (
+              comparison.isNew ? (
+                <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:14,marginBottom:16}}>
+                  <div style={{fontSize:14,fontWeight:700,color:"#1e40af",marginBottom:2}}>🆕 New product!</div>
+                  <div style={{fontSize:13,color:"#3b82f6"}}>No history yet — this will be your first record for "{form.product}".</div>
+                </div>
+              ) : (
+                <div style={{background:"#fafafa",border:"1px solid #e2e8f0",borderRadius:12,padding:14,marginBottom:16}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                    <div style={{fontSize:14,fontWeight:800,color:"#334155"}}>📊 Price Check</div>
+                    <div style={{fontSize:13,fontWeight:700,color:comparison.verdictColor}}>
+                      {comparison.verdictIcon} {comparison.verdict}{comparison.verdictPct!=null && ` (${comparison.verdictPct>0?"+":""}${comparison.verdictPct}% ${comparison.verdictNote})`}
+                    </div>
+                  </div>
+
+                  {/* Overall product history */}
+                  <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:10,padding:"8px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#64748b",width:"100%"}}>ALL HISTORY ({comparison.totalRecords} records)</div>
+                    {[["Avg",comparison.avgP,"#0f172a"],["Min",comparison.minP,"#16a34a"],["Max",comparison.maxP,"#dc2626"]].map(([l,v,c])=>(
+                      <div key={l} style={{fontSize:12}}>
+                        <span style={{color:"#64748b"}}>{l} </span>
+                        <strong style={{color:c}}>{fmt$(v)}</strong>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Same store history */}
+                  {comparison.storeHistory && (
+                    <div style={{marginBottom:10,padding:"8px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:4}}>AT {(form.store||"").toUpperCase()} ({comparison.storeHistory.count}×)</div>
+                      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+                        {comparison.storeHistory.lastLabel!=null && (
+                          <div style={{fontSize:12}}>
+                            <span style={{color:"#64748b"}}>Last </span>
+                            <strong>{comparison.storeHistory.lastLabel}</strong>
+                            {comparison.storeHistory.lastDate && <span style={{color:"#94a3b8",fontSize:11}}> ({comparison.storeHistory.lastDate})</span>}
+                          </div>
+                        )}
+                        {comparison.storeHistory.trend && comparison.storeHistory.trend!=="same" && (
+                          <span style={{fontSize:12,fontWeight:700,color:comparison.storeHistory.trend==="up"?"#dc2626":"#16a34a"}}>
+                            {comparison.storeHistory.trend==="up"?"📈 Price went up":"📉 Price dropped"}
+                          </span>
+                        )}
+                        {comparison.storeHistory.trend==="same" && (
+                          <span style={{fontSize:12,fontWeight:600,color:"#64748b"}}>→ Same price</span>
+                        )}
+                      </div>
+                      {comparison.storeHistory.avgPrice!=null && (
+                        <div style={{fontSize:12,marginTop:4}}>
+                          <span style={{color:"#64748b"}}>Store avg </span>
+                          <strong>{fmt$(comparison.storeHistory.avgPrice)}</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Brand history */}
+                  {comparison.brandHistory && (
+                    <div style={{marginBottom:10,padding:"8px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:4}}>{(form.brand||"").toUpperCase()} ({comparison.brandHistory.count}×)</div>
+                      <div style={{display:"flex",gap:12,fontSize:12}}>
+                        <div><span style={{color:"#64748b"}}>Avg </span><strong>{fmt$(comparison.brandHistory.avgPrice)}</strong></div>
+                        <div><span style={{color:"#64748b"}}>Best </span><strong style={{color:"#16a34a"}}>{fmt$(comparison.brandHistory.minPrice)}</strong></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Best price ever */}
+                  {comparison.cheapest && (
+                    <div style={{fontSize:12,color:"#64748b",padding:"6px 10px",background:"#f0fdf4",borderRadius:8,border:"1px solid #dcfce7"}}>
+                      🏆 Best ever: <strong style={{color:"#16a34a"}}>{comparison.bestLabel}</strong>
+                      {comparison.cheapest.store && <> at <strong>{comparison.cheapest.store}</strong></>}
+                      {comparison.cheapest.date && <span style={{color:"#94a3b8"}}> ({comparison.cheapest.date})</span>}
+                    </div>
+                  )}
+
+                  {/* Unit price comparison */}
+                  {comparison.unitComparison && (
+                    <div style={{fontSize:12,color:"#64748b",marginTop:8,padding:"6px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                      ⚖️ Unit price: <strong style={{color:comparison.unitComparison.pctFromAvg!=null&&comparison.unitComparison.pctFromAvg>5?"#dc2626":comparison.unitComparison.pctFromAvg!=null&&comparison.unitComparison.pctFromAvg<=-10?"#16a34a":"#0f172a"}}>{fmt$3(comparison.unitComparison.currentPerKg)}/kg</strong>
+                      <span> vs avg </span><strong>{fmt$3(comparison.unitComparison.avgPerKg)}/kg</strong>
+                      {comparison.unitComparison.pctFromAvg!=null && <span style={{fontWeight:700,color:comparison.unitComparison.pctFromAvg>5?"#dc2626":comparison.unitComparison.pctFromAvg<=-10?"#16a34a":"#d97706"}}> ({comparison.unitComparison.pctFromAvg>0?"+":""}{comparison.unitComparison.pctFromAvg}%)</span>}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+
+            <button className="btn btn-primary"   onClick={save}>{editId?"Save Changes":"Add Entry"}</button>
+            <button className="btn btn-secondary" onClick={cancel}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SHOP ── */}
+      {tab==="shop" && (
+        <div className="page">
+          {shopProducts.productSet.length === 0
+            ? <div className="empty"><div className="empty-icon">🛍️</div><div className="empty-text">Add some products first.</div></div>
+            : <>
+                <div className="card">
+                  <div className="section-title">Shopping List</div>
+                  <p style={{fontSize:13,color:"#94a3b8",marginBottom:12,lineHeight:1.5}}>
+                    Tap a product to add it. Long-press to pin it to a specific store.
+                  </p>
+
+                  {/* Controls row */}
+                  <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+                    <button className="btn btn-sm btn-secondary" onClick={selectAllShop}>Select all</button>
+                    <button className="btn btn-sm btn-secondary" onClick={clearAllShop}>Clear</button>
+                    <div style={{flex:1}}/>
+                    <span style={{fontSize:13,fontWeight:700,color:"#2563eb"}}>{shopSelected.size} selected</span>
+                  </div>
+
+                  {/* Max stores constraint */}
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,padding:"10px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
+                    <span style={{fontSize:13,fontWeight:600,color:"#475569"}}>Max stores:</span>
+                    {[0,1,2,3].map(n=>(
+                      <button key={n} onClick={()=>setShopMaxStores(n)}
+                        style={{border:shopMaxStores===n?"2px solid #2563eb":"1.5px solid #e2e8f0",background:shopMaxStores===n?"#eff6ff":"#fff",
+                          color:shopMaxStores===n?"#2563eb":"#64748b",borderRadius:8,padding:"5px 12px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        {n===0?"Any":n}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Product list */}
+                  {Object.entries(shopProducts.byCat).sort(([a],[b])=>a.localeCompare(b)).map(([cat, products])=>(
+                    <div key={cat}>
+                      <div className="shop-cat-header">{cat}</div>
+                      {products.map(p => {
+                        const on = shopSelected.has(p);
+                        const rows = entries.filter(e=>!e.deletedAt&&e.product===p);
+                        const stores = [...new Set(rows.map(e=>e.store).filter(Boolean))];
+                        const pin = shopPinned[p];
+                        return (
+                          <div key={p} style={{display:"flex",alignItems:"center",gap:0}}>
+                            <div className="shop-item" style={{flex:1}} onClick={()=>toggleShopItem(p)}>
+                              <div className={`shop-cb${on?" on":""}`}>{on?"✓":""}</div>
+                              <div style={{flex:1}}>
+                                <div className="shop-item-name">
+                                  {p}
+                                  {pin && <span style={{fontSize:11,fontWeight:700,color:"#d97706",marginLeft:6}}>📌 {pin}</span>}
+                                </div>
+                                <div className="shop-item-sub">{stores.join(", ")} · {rows.length} record{rows.length!==1?"s":""}</div>
+                              </div>
+                            </div>
+                            {on && stores.length > 0 && (
+                              <div style={{display:"flex",gap:3,paddingRight:4,flexShrink:0}}>
+                                {stores.map(s=>{
+                                  const isPinned = pin === s;
+                                  return (
+                                    <button key={s} onClick={(e)=>{e.stopPropagation();togglePin(p,s);}}
+                                      title={isPinned ? `Unpin from ${s}` : `Pin to ${s}`}
+                                      style={{border:isPinned?"1.5px solid #d97706":"1.5px solid #e2e8f0",background:isPinned?"#fef3c7":"#fff",
+                                        color:isPinned?"#d97706":"#94a3b8",borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,
+                                        cursor:"pointer",fontFamily:"inherit",lineHeight:1.2}}>
+                                      {s.slice(0,3)}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Error state */}
+                {shopResults && shopResults.error && (
+                  <div className="card" style={{background:"#fef2f2",borderColor:"#fca5a5"}}>
+                    <div style={{fontSize:14,fontWeight:700,color:"#dc2626",marginBottom:4}}>⚠️ Constraint conflict</div>
+                    <div style={{fontSize:13,color:"#dc2626"}}>{shopResults.error}</div>
+                  </div>
+                )}
+
+                {/* Results */}
+                {shopResults && !shopResults.error && shopResults.items.length > 0 && (
+                  <>
+                    {/* Summary cards */}
+                    <div className="shop-summary">
+                      <div className="shop-summary-card">
+                        <div className="shop-summary-val" style={{color:"#16a34a"}}>{fmt$(shopResults.optimalTotal)}</div>
+                        <div className="shop-summary-lbl">Optimized estimate</div>
+                      </div>
+                      <div className="shop-summary-card">
+                        <div className="shop-summary-val" style={{color:"#2563eb"}}>{Object.values(shopResults.byStore).filter(v=>v.length>0).length}</div>
+                        <div className="shop-summary-lbl">{shopResults.maxStoresActive ? `Store${Object.values(shopResults.byStore).filter(v=>v.length>0).length!==1?"s":""} (max ${shopMaxStores})` : "Stores to visit"}</div>
+                      </div>
+                    </div>
+
+                    {/* Missing items warning */}
+                    {shopResults.missing && shopResults.missing.length > 0 && (
+                      <div className="card" style={{background:"#fffbeb",borderColor:"#fde68a",marginBottom:12}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:2}}>⚠️ {shopResults.missing.length} item{shopResults.missing.length!==1?"s":""} not available at selected stores</div>
+                        <div style={{fontSize:12,color:"#92400e"}}>{shopResults.missing.join(", ")}</div>
+                      </div>
+                    )}
+
+                    {/* Per-store breakdown */}
+                    {shopResults.storeSet.filter(s=>shopResults.byStore[s]?.length>0).map(store=>{
+                      const items = shopResults.byStore[store];
+                      const storeTotal = items.reduce((s,i)=>s+(i.bestTotal||0),0);
+                      const colors = {Walmart:"#2563eb",Superstore:"#dc2626",IGA:"#d97706"};
+                      const bgColors = {Walmart:"#dbeafe",Superstore:"#fee2e2",IGA:"#fef3c7"};
+                      return (
+                        <div key={store} className="card shop-results-store">
+                          <div className="shop-store-header">
+                            <span className="shop-store-name" style={{color:colors[store]||"#0f172a"}}>{store}</span>
+                            <span className="shop-store-badge" style={{background:bgColors[store]||"#f1f5f9",color:colors[store]||"#475569"}}>
+                              {items.length} item{items.length!==1?"s":""}
+                            </span>
+                            <span style={{marginLeft:"auto",fontSize:16,fontWeight:800,color:colors[store]||"#0f172a"}}>~{fmt$(storeTotal)}</span>
+                          </div>
+                          {items.sort((a,b)=>a.product.localeCompare(b.product)).map(item=>(
+                            <div key={item.product} className="shop-result-item">
+                              <div>
+                                <div className="shop-result-name">
+                                  {item.product}
+                                  {item.pinned && <span style={{fontSize:10,color:"#d97706",marginLeft:4}}>📌</span>}
+                                </div>
+                                {!item.pinned && Object.keys(item.storeAvgs).length > 1 && (
+                                  <div className="shop-result-note">
+                                    cheapest{item.bestInfo?.type==="kg" ? " by weight" : ""} vs {Object.keys(item.storeAvgs).filter(s=>s!==store).join(", ")}
+                                  </div>
+                                )}
+                                {item.pinned && (
+                                  <div className="shop-result-note">pinned to this store</div>
+                                )}
+                              </div>
+                              <div className="shop-result-price" style={{color:colors[store]||"#0f172a"}}>
+                                ~{fmt$(item.bestTotal)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+
+                    {/* Single-store comparison */}
+                    <div className="card">
+                      <div className="section-title">What if one store only?</div>
+                      <p style={{fontSize:13,color:"#94a3b8",marginBottom:10,lineHeight:1.5}}>
+                        Estimated cost if you bought everything at a single store (items they carry):
+                      </p>
+                      {shopResults.storeSet.filter(s=>shopResults.singleStore[s]).sort((a,b)=>(shopResults.singleStore[a]?.total||999)-(shopResults.singleStore[b]?.total||999)).map(store=>{
+                        const ss = shopResults.singleStore[store];
+                        const isOptimal = ss.overpayPct <= 0;
+                        const bg = isOptimal ? "#f0fdf4" : ss.overpayPct > 15 ? "#fef2f2" : "#fffbeb";
+                        const color = isOptimal ? "#16a34a" : ss.overpayPct > 15 ? "#dc2626" : "#d97706";
+                        return (
+                          <div key={store} className="shop-single-store" style={{background:bg}}>
+                            <div>
+                              <span style={{fontWeight:700}}>{store}</span>
+                              {ss.missing.length > 0 && <span style={{fontSize:11,color:"#94a3b8"}}> ({ss.covered}/{shopResults.items.length} items)</span>}
+                            </div>
+                            <div style={{textAlign:"right"}}>
+                              <span style={{fontWeight:700,color}}>{fmt$(ss.total)}</span>
+                              {!isOptimal && <span style={{fontSize:12,color,marginLeft:6}}>+{ss.overpayPct}%</span>}
+                              {ss.missing.length > 0 && (
+                                <div style={{fontSize:10,color:"#94a3b8"}}>missing: {ss.missing.slice(0,3).join(", ")}{ss.missing.length>3?` +${ss.missing.length-3} more`:""}</div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </>
+          }
+        </div>
+      )}
+
+      {/* ── ANALYTICS ── */}
+      {tab==="analytics" && (
+        <div className="page">
+          {activeCount===0
+            ? <div className="empty"><div className="empty-icon">📊</div><div className="empty-text">No data yet.</div></div>
+            : <>
+                <div className="search-wrap">
+                  <span className="search-icon">🔍</span>
+                  <input ref={analyticsSearchRef} value={analyticsSearch}
+                    onChange={e=>setAnalyticsSearch(e.target.value)}
+                    placeholder="Search product, brand, or tag…" />
+                  {analyticsSearch&&<button className="search-clear" onClick={()=>{setAnalyticsSearch("");analyticsSearchRef.current?.focus();}}>×</button>}
+                </div>
+
+                {allCats.length>0&&(
+                  <div className="filter-bar">
+                    <button className={`filter-chip${!analyticsCat?" active":""}`} onClick={()=>setAnalyticsCat(null)}>All</button>
+                    {allCats.map(c=>(
+                      <button key={c} className={`filter-chip${analyticsCat===c?" active":""}`} onClick={()=>setAnalyticsCat(analyticsCat===c?null:c)}>{c}</button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="card">
+                  <div className="section-title">Price breakdown{analyticsCat?` — ${analyticsCat}`:""}{analyticsSearch?` — "${analyticsSearch}"`:""}</div>
+                  {filteredAnalytics.length===0
+                    ? <div style={{color:"#64748b",fontSize:13}}>No entries match{analyticsSearch?" your search":""}.</div>
+                    : filteredAnalytics.map(p=>(
+                    <div key={p.product} className="product-row">
+                      <div className="product-name" style={{display:"flex",alignItems:"center",gap:10}}>
+                        {p.image && <img src={p.image} alt={p.product} onError={(ev)=>{ev.target.style.display='none';}} style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"1px solid #e2e8f0",flexShrink:0}} />}
+                        <span>{p.product} <span style={{fontWeight:400,color:"#64748b",fontSize:12}}>({p.count} record{p.count!==1?"s":""})</span></span>
+                      </div>
+
+                      {/* Product-level summary */}
+                      <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"6px 0 2px",paddingLeft:2}}>
+                        {[["Avg",p.avgPrice,"#0f172a"],["Min",p.minPrice,"#16a34a"],["Max",p.maxPrice,"#dc2626"]].map(([l,v,c])=>fmt$(v)?(
+                          <div key={l} style={{fontSize:13}}>
+                            <span style={{color:"#475569",fontSize:11}}>{l} </span>
+                            <strong style={{color:c}}>{fmt$(v)}</strong>
+                          </div>
+                        ):null)}
+                      </div>
+                      {p.unitLabel && (
+                        <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"2px 0 4px",paddingLeft:2}}>
+                          {[["Avg "+p.unitLabel,p.unitAvg,"#0f172a"],["Min "+p.unitLabel,p.unitMin,"#16a34a"],["Max "+p.unitLabel,p.unitMax,"#dc2626"]].map(([l,v,c])=>v!=null?(
+                            <div key={l} style={{fontSize:13}}>
+                              <span style={{color:"#475569",fontSize:11}}>{l} </span>
+                              <strong style={{color:c}}>{fmt$3(v)}</strong>
+                            </div>
+                          ):null)}
+                        </div>
+                      )}
+
+                      {p.brandData.map(b=>(
+                        <div key={b.brand} className="brand-block">
+                          <div className="brand-title">
+                            {b.brand}
+                            <span style={{fontWeight:400,color:"#64748b",marginLeft:6,fontSize:11}}>({b.count})</span>
+                          </div>
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap",margin:"4px 0 6px"}}>
+                            {[["avg",b.avgPrice],["min",b.minPrice],["max",b.maxPrice]].map(([l,v])=>fmt$(v)?(
+                              <span key={l} style={{fontSize:11,color:"#64748b"}}>{l} <strong style={{color:l==="min"?"#16a34a":l==="max"?"#dc2626":"#0f172a"}}>{fmt$(v)}</strong></span>
+                            ):null)}
+                            {p.unitLabel && b.bUnitAvg!=null && (
+                              <>
+                                <span style={{fontSize:11,color:"#cbd5e1"}}>│</span>
+                                {[["avg",b.bUnitAvg],["min",b.bUnitMin],["max",b.bUnitMax]].map(([l,v])=>v!=null?(
+                                  <span key={l+"u"} style={{fontSize:11,color:"#64748b"}}>{l} <strong style={{color:l==="min"?"#16a34a":l==="max"?"#dc2626":"#3b82f6"}}>{fmt$3(v)}</strong><span style={{color:"#64748b",fontSize:10}}>/{p.unitLabel.replace("$/","")}</span></span>
+                                ):null)}
+                              </>
+                            )}
+                          </div>
+
+                          {b.storeAvgs.length > 0 && (
+                            <div className="store-bars">
+                              {b.storeAvgs.map((sv,i)=>{
+                                const unitAvg = b.storeUnitAvgs?.find(su=>su.store===sv.store);
+                                const useUnit = b.hasUnitData && unitAvg;
+                                const barValue = useUnit ? unitAvg.avg : sv.avg;
+                                const barMax = useUnit ? b.maxUnitAvg : b.maxAvg;
+                                return (
+                                <div key={sv.store} className="store-bar">
+                                  <div className="store-name" style={{color:i===0?"#15803d":i===b.storeAvgs.length-1&&i>0?"#b91c1c":"#475569"}}>
+                                    {i===0&&b.storeAvgs.length>1 ? "✓ " : ""}{sv.store}
+                                  </div>
+                                  <div className="bar-track">
+                                    <div className="bar-fill" style={{
+                                      width:`${(barValue/barMax*100).toFixed(1)}%`,
+                                      background: i===0?"#16a34a":i===b.storeAvgs.length-1&&i>0?"#dc2626":"#3b82f6"
+                                    }}/>
+                                  </div>
+                                  <div className="store-price" style={{color:i===0?"#15803d":i===b.storeAvgs.length-1&&i>0?"#b91c1c":"#0f172a"}}>
+                                    {useUnit
+                                      ? <>{fmt$3(unitAvg.avg)}/{p.unitLabel.replace("$/","")}<div style={{fontSize:10,color:"#64748b",fontWeight:400}}>avg {fmt$(sv.avg)}</div></>
+                                      : <>{fmt$(sv.avg)}{unitAvg && p.unitLabel && <div style={{fontSize:10,color:"#64748b",fontWeight:400}}>{fmt$3(unitAvg.avg)}/{p.unitLabel.replace("$/","")}</div>}</>
+                                    }
+                                  </div>
+                                </div>
+                              );})}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </>
+          }
+        </div>
+      )}
+
+      {/* ── SYNC TAB ── */}
+      {tab==="sync" && (
+        <div className="page">
+          <div className="card" style={{background:"#dcfce7",borderColor:"#86efac"}}>
+            <div className="section-title" style={{color:"#15803d"}}>📸 Image Storage (S3)</div>
+            <p style={{fontSize:14,color:"#15803d",marginBottom:0,lineHeight:1.6}}>
+              Product images are uploaded to your S3 bucket at <code style={{background:"#fff",padding:"2px 6px",borderRadius:4}}>s3://grocery-tracker/product-images/</code>. Only URLs are synced between devices. Storage cost: ~$0.02/month for 500 images.
+            </p>
+          </div>
+          
+          <div className="card">
+            <div className="section-title">Cloud sync</div>
+            <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>
+              Syncs automatically on open and 1.5s after every save. Both you and your mom use the same Lambda URL and secret — last edit always wins.
+            </p>
+            <div style={{background:"#0d1117",borderRadius:10,padding:"12px 14px",marginBottom:14,fontSize:13,color:"#64748b",lineHeight:1.8}}>
+              <div>Status: <strong style={{color:syncStatus==="synced"?"#4ade80":syncStatus==="error"?"#fca5a5":"#93c5fd"}}>{syncStatus}</strong></div>
+              {lastSynced&&<div>Last synced: <strong style={{color:"#e2e8f0"}}>{lastSynced.toLocaleTimeString()}</strong></div>}
+              <div>Entries in database: <strong style={{color:"#e2e8f0"}}>{activeCount}</strong>{deletedCount>0&&<span style={{color:"#fca5a5"}}> (+{deletedCount} deleted)</span>}</div>
+            </div>
+            <button className="btn btn-primary" onClick={()=>pullCloud(secret)}>🔄 Sync now</button>
+          </div>
+          {deletedCount>0&&(
+            <div className="card">
+              <div className="section-title">🗑️ Deleted entries</div>
+              <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>
+                {deletedCount} deleted {deletedCount===1?"entry is":"entries are"} kept as tombstones so sync can propagate deletions across devices. Once both devices are synced, you can permanently purge them to free space.
+              </p>
+              <button className="btn btn-danger" onClick={purgeDeleted}>🗑️ Purge {deletedCount} deleted {deletedCount===1?"entry":"entries"}</button>
+            </div>
+          )}
+          <div className="card">
+            <div className="section-title">Change secret key</div>
+            <p style={{fontSize:14,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>Update the key saved on this device.</p>
+            <input type="password" placeholder="New secret key…" value={secretInput} onChange={e=>setSecretInput(e.target.value)} style={{marginBottom:10}} />
+            <button className="btn btn-warning" onClick={saveSecret}>Update key</button>
+          </div>
+          <div className="card">
+            <div className="section-title">File backup</div>
+            <p style={{fontSize:14,color:"#94a3b8",marginBottom:14,lineHeight:1.6}}>Download or restore a local backup, independent of cloud sync.</p>
+            <button className="btn btn-success" onClick={exportData}>⬇️ Export backup</button>
+            <input ref={importRef} type="file" accept=".json,application/json" style={{display:"none"}} onChange={importData} />
+            <button className="btn btn-secondary" onClick={()=>importRef.current.click()}>⬆️ Import backup</button>
+          </div>
+          <div className="card">
+            <div className="section-title">🐛 Image debug</div>
+            <p style={{fontSize:13,color:"#94a3b8",marginBottom:10,lineHeight:1.5}}>Shows imageUrl status for each entry to diagnose missing photos.</p>
+            <div style={{maxHeight:300,overflow:"auto",background:"#0d1117",borderRadius:10,padding:10,fontSize:11,fontFamily:"monospace",lineHeight:1.8,color:"#e2e8f0"}}>
+              {entries.filter(e=>!e.deletedAt).map(e=>{
+                const url = e.imageUrl||"";
+                const s3p = e.imageS3Path||"";
+                let tag, color;
+                if (!url && !s3p) { tag="NO IMAGE"; color="#64748b"; }
+                else if (url.startsWith("s3://")) { tag="s3:// PATH (not converted!)"; color="#fbbf24"; }
+                else if (url.startsWith("data:")) { tag="DATA URL ("+url.length+" chars)"; color="#818cf8"; }
+                else if (url.startsWith("http")) { tag="URL OK"; color="#4ade80"; }
+                else { tag="UNKNOWN: "+url.slice(0,40); color="#fca5a5"; }
+                return (
+                  <div key={e.id} style={{borderBottom:"1px solid #1e293b",paddingBottom:4,marginBottom:4}}>
+                    <span style={{color:"#93c5fd"}}>{e.product}</span>{e.brand?<span style={{color:"#64748b"}}> ({e.brand})</span>:null}
+                    <br/>
+                    <span style={{color}}>  → {tag}</span>
+                    {url.startsWith("http")&&<><br/><span style={{color:"#64748b"}}>  {url.slice(0,80)}…</span></>}
+                    {s3p&&<><br/><span style={{color:"#fbbf24"}}>  s3Path: {s3p}</span></>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && <div className="toast">{toast}</div>}
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
