@@ -903,14 +903,19 @@ function App() {
       }
     };
     // Try all sizes from 0 up to slotsLeft (fewer stores might still be optimal)
-    for (let k = 0; k <= Math.min(slotsLeft, nonForced.length); k++) {
+    const minExtra = forcedStores.size > 0 ? 0 : 1;  // need at least 1 store total
+    for (let k = minExtra; k <= Math.min(slotsLeft, nonForced.length); k++) {
       generateCombos(nonForced, k);
     }
 
     for (const extra of combos) {
       const allowed = new Set([...forcedStores, ...extra]);
+      if (allowed.size === 0) continue;  // need at least 1 store
       const result = assignToStores(allowed);
-      if (!bestResult || result.total < bestResult.total || (result.total === bestResult.total && allowed.size < bestComboStores.size)) {
+      // Prefer: more items covered, then lower total
+      if (!bestResult
+        || result.items.length > bestResult.items.length
+        || (result.items.length === bestResult.items.length && result.total < bestResult.total)) {
         bestResult = result;
         bestComboStores = allowed;
       }
